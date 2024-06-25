@@ -1,0 +1,69 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "yore"
+description = "Manage legacy code with comments."
+authors = [{name = "Timothée Mazzucotelli", email = "dev@pawamoy.fr"}]
+license = {text = "ISC"}
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = []
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Documentation",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://pawamoy.github.io/yore"
+Documentation = "https://pawamoy.github.io/yore"
+Changelog = "https://pawamoy.github.io/yore/changelog"
+Repository = "https://github.com/pawamoy/yore"
+Issues = "https://github.com/pawamoy/yore/issues"
+Discussions = "https://github.com/pawamoy/yore/discussions"
+Gitter = "https://gitter.im/yore/community"
+Funding = "https://github.com/sponsors/pawamoy"
+
+[project.scripts]
+yore = "yore.cli:main"
+
+[tool.pdm]
+version = {source = "scm"}
+
+[tool.pdm.build]
+package-dir = "src"
+editable-backend = "editables"
+excludes = ["**/.pytest_cache"]
+source-includes = [
+    "config",
+    "docs",
+    "scripts",
+    "share",
+    "tests",
+    "devdeps.txt",
+    "duties.py",
+    "mkdocs.yml",
+    "*.md",
+    "LICENSE",
+]
+
+[tool.pdm.build.wheel-data]
+data = [
+    {path = "share/**/*", relative-to = "."},
+]

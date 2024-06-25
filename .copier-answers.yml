@@ -1,0 +1,20 @@
+# Changes here will be overwritten by Copier
+_commit: 1.2.10
+_src_path: gh:pawamoy/copier-uv
+author_email: dev@pawamoy.fr
+author_fullname: Timothée Mazzucotelli
+author_username: pawamoy
+copyright_date: '2024'
+copyright_holder: Timothée Mazzucotelli
+copyright_holder_email: dev@pawamoy.fr
+copyright_license: ISC License
+insiders: false
+project_description: Manage legacy code with comments.
+project_name: yore
+python_package_command_line_name: yore
+python_package_distribution_name: yore
+python_package_import_name: yore
+repository_name: yore
+repository_namespace: pawamoy
+repository_provider: github.com
+
