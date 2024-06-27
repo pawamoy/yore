@@ -28,7 +28,7 @@ class _Match:
     def __init__(self, lines: str) -> None:
         self.lines = lines
 
-    def group(self, name: str) -> str:
+    def group(self, name: str) -> str:  # noqa: ARG002
         return self.lines
 
 

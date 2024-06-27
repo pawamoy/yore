@@ -20,10 +20,11 @@ from datetime import timedelta
 from functools import wraps
 from inspect import cleandoc
 from pathlib import Path
+from typing import Annotated as An
 from typing import Any, Callable
 
 import cappa
-from typing_extensions import Annotated as An, Doc
+from typing_extensions import Doc
 
 from yore import debug  # noqa: TCH001
 from yore.lib import yield_buffer_comments, yield_path_comments, yield_python_files
