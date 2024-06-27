@@ -48,4 +48,4 @@ class _Match:
 def test_match_to_lines(lines: str, expected_lines: list[int]) -> None:
     """Assert that `_match_to_lines` returns the expected lines."""
     match = _Match(lines)
-    assert lib._match_to_lines(match) == expected_lines
+    assert lib._match_to_lines(match) == expected_lines  # type: ignore[arg-type]
