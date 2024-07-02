@@ -7,7 +7,7 @@ Yore lets you write `# YORE` comments in your code base to mark some lines of bl
 The syntax is as follows:
 
 ```python
-# YORE: <eol|bump> <VERSION>: Remove <block|line>.
+# YORE: <eol|bump> <VERSION>: remove <block|line>.
 # YORE: <eol|bump> <VERSION>: replace <block|line> with line <LINENO>.
 # YORE: <eol|bump> <VERSION>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
 # YORE: <eol|bump> <VERSION>: replace <block|line> with `<STRING>`.
@@ -38,7 +38,7 @@ def __getattr__(name: str) -> Any:
     raise AttributeError
 ```
 
-*Simply `ast.unparse` import when Python 3.8 reaches its End of Life.*
+*Simplify `ast.unparse` import when Python 3.8 reaches its End of Life.*
 
 ```python
 # YORE: EOL 3.8: Replace block with line 4.
@@ -85,7 +85,7 @@ return _True if self.public else _False
 
 ## Blocks
 
-Here is what a block is to Yore. A block is a list of consecutive non-blank or over-indented lines.
+A block is a list of consecutive non-blank or over-indented lines.
 
 ```python
 # YORE: This is a block.
