@@ -81,7 +81,7 @@ def get_debug_info() -> Environment:
     """
     py_name, py_version = _interpreter_name_version()
     packages = ["yore"]
-    variables = ["PYTHONPATH", *[var for var in os.environ if var.startswith("YORE")]]
+    variables = ["PYTHONPATH", *(var for var in os.environ if var.startswith("YORE"))]
     return Environment(
         interpreter_name=py_name,
         interpreter_version=py_version,
