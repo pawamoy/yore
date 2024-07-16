@@ -7,14 +7,16 @@ Yore lets you write `# YORE` comments in your code base to mark some lines of bl
 The syntax is as follows:
 
 ```python
-# YORE: <eol|bump> <VERSION>: remove <block|line>.
-# YORE: <eol|bump> <VERSION>: replace <block|line> with line <LINENO>.
-# YORE: <eol|bump> <VERSION>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-# YORE: <eol|bump> <VERSION>: replace <block|line> with `<STRING>`.
-# YORE: <eol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
+# YORE: <eol|bump> <VERSION>: remove <file|block|line>.
+# YORE: <eol|bump> <VERSION>: replace <file|block|line> with line <LINENO>.
+# YORE: <eol|bump> <VERSION>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+# YORE: <eol|bump> <VERSION>: replace <file|block|line> with `<STRING>`.
+# YORE: <eol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
 ```
 
 Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional. Uppercase terms are placeholders that you should replace with actual values, while lowercase terms are keywords that you should use literally. Everything except placeholders is case-insensitive.
+
+Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope. 
 
 ## Examples
 

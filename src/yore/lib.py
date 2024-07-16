@@ -17,10 +17,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 YoreKind = Literal["bump", "eol"]
-"""The supported kind of Yore-comments."""
+"""The supported kinds of Yore-comments."""
 
-BlockOrLine = Literal["block", "line"]
-"""A block or a line."""
+Scope = Literal["block", "file", "line"]
+"""The scope of a comment."""
 
 DEFAULT_PREFIX = "YORE"
 """The default prefix for Yore-comments."""
@@ -51,6 +51,16 @@ def _block_size(buffer: list[str], start: int) -> int:
             consecutive_blank += 1
         size += 1
     return size - consecutive_blank
+
+
+def _scope_range(replace: Scope, buffer: list[str], start: int) -> tuple[int, int]:
+    if replace == "line":
+        return start, start + 1
+    if replace == "block":
+        return start, start + _block_size(buffer, start)
+    if replace == "file":
+        return 0, len(buffer)
+    raise ValueError(f"Invlid replace scope: {replace}")
 
 
 def _reindent(lines: list[str], indent: int) -> list[str]:
@@ -116,15 +126,15 @@ class YoreComment:
     raw: str
     kind: YoreKind
     version: str
-    remove: BlockOrLine | None = None
-    replace: BlockOrLine | None = None
+    remove: Scope | None = None
+    replace: Scope | None = None
     line: int | None = None
     lines: list[int] | None = None
     string: str | None = None
     regex: bool = False
     pattern1: str | None = None
     pattern2: str | None = None
-    within: BlockOrLine | None = None
+    within: Scope | None = None
 
     @property
     def is_eol(self) -> bool:
@@ -179,19 +189,25 @@ class YoreComment:
         """
         write = buffer is None
         buffer = buffer or self.file.read_text().splitlines(keepends=True)
+
+        # Check if the fix should be applied.
         if (
             self.is_eol
             and (fix_before_eol and _within(fix_before_eol, self.eol) or _within(timedelta(days=0), self.eol))
         ) or (self.is_bump and bump and Version(bump) >= Version(self.version)):
+            # Start at the commnent line, immediately remove it.
             start = self.lineno - 1
             del buffer[start]
 
             if self.remove:
-                block_size = 1 if self.remove == "line" else _block_size(buffer, start)
-                del buffer[start : start + block_size]
+                start, end = _scope_range(self.remove, buffer, start)
+                del buffer[start:end]
+                if self.remove == "file":
+                    self.file.unlink()
 
             elif self.replace:
-                block_size = 1 if self.replace == "line" else _block_size(buffer, start)
+                # Line numbers/ranges are relative to block starts, absolute for the "file" scope.
+                start, end = _scope_range(self.replace, buffer, start)
                 if self.line:
                     replacement = [buffer[start + self.line - 1]]
                 elif self.lines:
@@ -201,20 +217,21 @@ class YoreComment:
                 else:
                     raise RuntimeError("No replacement specified")
                 replacement = _reindent(replacement, _indent(buffer[start]))
-                buffer[start : start + block_size] = replacement
+                buffer[start:end] = replacement
 
             elif self.within:
-                block_size = 1 if self.within == "line" else _block_size(buffer, start)
-                block = buffer[start : start + block_size]
+                # Line numbers/ranges are relative to block starts, absolute for the "file" scope.
+                start, end = _scope_range(self.within, buffer, start)
+                block = buffer[start:end]
                 if self.regex:
                     pattern1: Pattern = re.compile(self.pattern1)
                     replacement = [pattern1.sub(self.pattern2, line) for line in block]
                 else:
                     replacement = [line.replace(self.pattern1, self.pattern2) for line in block]  # type: ignore[arg-type]
                 replacement = _reindent(replacement, _indent(buffer[start]))
-                buffer[start : start + block_size] = replacement
+                buffer[start:end] = replacement
 
-            if write:
+            if write and buffer:
                 self.file.write_text("".join(buffer))
 
             return True
@@ -224,9 +241,9 @@ class YoreComment:
 COMMENT_PATTERN = r"""
     ^\s*
     \#\ {prefix}:\ (?P<kind>bump|eol)\ (?P<version>[^:]+):\ (?:
-        remove\ (?P<remove>block|line)
+        remove\ (?P<remove>block|file|line)
         |
-        replace\ (?P<replace>block|line)\ with\ (?:
+        replace\ (?P<replace>block|file|line)\ with\ (?:
             line\ (?P<line>\d+)
             |
             lines\ (?P<lines>[\d, -]+)
@@ -234,7 +251,7 @@ COMMENT_PATTERN = r"""
             `(?P<string>.+)`
         )
         |
-        (?P<regex>regex-)?replace\ `(?P<pattern1>.+)`\ with\ `(?P<pattern2>.*)`\ within\ (?P<within>block|line)
+        (?P<regex>regex-)?replace\ `(?P<pattern1>.+)`\ with\ `(?P<pattern2>.*)`\ within\ (?P<within>block|file|line)
     )\.?.*$
 """
 """The Yore-comment pattern, as a regular expression."""

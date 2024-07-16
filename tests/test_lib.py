@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from yore import lib
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.mark.parametrize(
@@ -49,3 +54,11 @@ def test_match_to_lines(lines: str, expected_lines: list[int]) -> None:
     """Assert that `_match_to_lines` returns the expected lines."""
     match = _Match(lines)
     assert lib._match_to_lines(match) == expected_lines  # type: ignore[arg-type]
+
+
+def test_removing_file(tmp_path: Path) -> None:
+    """Files are removed by "remove" comments and "file" scope."""
+    file = tmp_path / "file1.py"
+    file.write_text("# YORE: Bump 1: Remove file.")
+    next(lib.yield_file_comments(file)).fix(bump="1")
+    assert not file.exists()
