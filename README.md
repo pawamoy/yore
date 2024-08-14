@@ -37,14 +37,14 @@ else:
 Check your code base:
 
 ```console
-$ yore check --warn-before-eol '5 months'
+$ yore check --eol-within '5 months'
 ./src/griffe/agents/nodes/_values.py:11: Python 3.8 will reach its End of Life within approx. 4 months
 ```
 
 Fix your code base:
 
 ```console
-$ yore fix --fix-before-eol '5 months'
+$ yore fix --eol-within '5 months'
 fixed 1 comment in ./src/griffe/agents/nodes/_values.py
 ```
 

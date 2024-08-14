@@ -6,7 +6,10 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date as Date  # noqa: N812
+from datetime import datetime as DateTime  # noqa: N812
+from datetime import timedelta as TimeDelta  # noqa: N812
+from datetime import timezone as TimeZone  # noqa: N812
 from typing import TYPE_CHECKING, ClassVar, Iterator, Literal, Pattern
 from urllib.request import urlopen
 
@@ -16,7 +19,7 @@ from packaging.version import Version
 if TYPE_CHECKING:
     from pathlib import Path
 
-YoreKind = Literal["bump", "eol"]
+YoreKind = Literal["bump", "eol", "bol"]
 """The supported kinds of Yore-comments."""
 
 Scope = Literal["block", "file", "line"]
@@ -109,12 +112,12 @@ def _match_to_comment(match: re.Match, file: Path, lineno: int) -> YoreComment:
     )
 
 
-def _within(delta: timedelta, of: date) -> bool:
-    return datetime.now(tz=timezone.utc).date() >= of - delta
+def _within(delta: TimeDelta, of: Date) -> bool:
+    return DateTime.now(tz=TimeZone.utc).date() >= of - delta
 
 
-def _delta(until: date) -> timedelta:
-    return until - datetime.now(tz=timezone.utc).date()
+def _delta(until: Date) -> TimeDelta:
+    return until - DateTime.now(tz=TimeZone.utc).date()
 
 
 @dataclass
@@ -137,6 +140,11 @@ class YoreComment:
     within: Scope | None = None
 
     @property
+    def is_bol(self) -> bool:
+        """Whether the comment is an End of Life comment."""
+        return self.kind.lower() == "bol"
+
+    @property
     def is_eol(self) -> bool:
         """Whether the comment is an End of Life comment."""
         return self.kind.lower() == "eol"
@@ -147,25 +155,44 @@ class YoreComment:
         return self.kind.lower() == "bump"
 
     @property
-    def eol(self) -> date:
-        """The End of Life date for the Python version."""
-        return eol_dates[self.version]
+    def bol(self) -> Date:
+        """The Beginning of Life date for the Python version."""
+        return python_dates[self.version][0]
 
-    def check(self, bump: str | None = None, warn_before_eol: timedelta | None = None) -> None:
+    @property
+    def eol(self) -> Date:
+        """The End of Life date for the Python version."""
+        return python_dates[self.version][1]
+
+    def check(
+        self,
+        *,
+        bump: str | None = None,
+        eol_within: TimeDelta | None = None,
+        bol_within: TimeDelta | None = None,
+    ) -> None:
         """Check the comment.
 
         Parameters:
             bump: The next version of the project.
-            warn_before_eol: The time delta to start warning before the End of Life of a Python version.
+            eol_within: The time delta to start warning before the End of Life of a Python version.
+            bol_within: The time delta to start warning before the Beginning of Life of a Python version.
         """
         msg_location = f"{self.file}:{self.lineno}: "
         if self.is_eol:
-            if warn_before_eol and _within(warn_before_eol, self.eol):
+            if eol_within and _within(eol_within, self.eol):
                 logger.warning(
                     f"{msg_location}Python {self.version} will reach its End of Life within approx. {naturaldelta(_delta(self.eol))}",
                 )
-            elif _within(timedelta(days=0), self.eol):
+            elif _within(TimeDelta(days=0), self.eol):
                 logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
+        elif self.is_bol:
+            if bol_within and _within(bol_within, self.bol):
+                logger.warning(
+                    f"{msg_location}Python {self.version} will be released within approx. {naturaldelta(_delta(self.bol))}",
+                )
+            elif _within(TimeDelta(days=0), self.bol):
+                logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
         elif self.is_bump and bump and Version(bump) >= Version(self.version):
             logger.error(
                 f"{msg_location}Code is scheduled for update/removal in {self.version} which is older than or equal to {bump}",
@@ -174,15 +201,18 @@ class YoreComment:
     def fix(
         self,
         buffer: list[str] | None = None,
+        *,
         bump: str | None = None,
-        fix_before_eol: timedelta | None = None,
+        eol_within: TimeDelta | None = None,
+        bol_within: TimeDelta | None = None,
     ) -> bool:
         """Fix the comment and code below it.
 
         Parameters:
             buffer: The buffer to fix. If not provided, read from and write to the file.
             bump: The next version of the project.
-            fix_before_eol: The time delta to start fixing before the End of Life of a Python version.
+            eol_within: The time delta to start fixing before the End of Life of a Python version.
+            bol_within: The time delta to start fixing before the Beginning of Life of a Python version.
 
         Returns:
             Whether the comment was fixed.
@@ -192,9 +222,10 @@ class YoreComment:
 
         # Check if the fix should be applied.
         if (
-            self.is_eol
-            and (fix_before_eol and _within(fix_before_eol, self.eol) or _within(timedelta(days=0), self.eol))
-        ) or (self.is_bump and bump and Version(bump) >= Version(self.version)):
+            (self.is_eol and (eol_within and _within(eol_within, self.eol) or _within(TimeDelta(days=0), self.eol)))
+            or (self.is_bol and (bol_within and _within(bol_within, self.bol) or _within(TimeDelta(days=0), self.bol)))
+            or (self.is_bump and bump and Version(bump) >= Version(self.version))
+        ):
             # Start at the commnent line, immediately remove it.
             start = self.lineno - 1
             del buffer[start]
@@ -332,31 +363,38 @@ def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
         yield from yield_file_comments(path, prefix=prefix)
 
 
-class _LazyEOLDates:
+class _LazyPythonDates:
     EOL_DATA_URL = "https://raw.githubusercontent.com/python/devguide/main/include/release-cycle.json"
-    _dates: ClassVar[dict[str, date]] = {}
+    _dates: ClassVar[dict[str, tuple[Date, Date]]] = {}
 
-    def __getitem__(self, version: str) -> date:
+    def __getitem__(self, version: str) -> tuple[Date, Date]:
         if not self._dates:
             self._fetch()
         return self._dates[version]
 
+    @staticmethod
+    def _to_date(date: str) -> Date:
+        parts = [int(part) for part in date.split("-")]
+        if len(parts) == 2:  # noqa: PLR2004
+            # Without a day, assume date to be the first of the next month.
+            year, month = parts
+            if month == 12:  # noqa: PLR2004
+                month = 1
+                year += 1
+            else:
+                month += 1
+            day = 1
+        else:
+            year, month, day = parts
+        return Date(year, month, day)
+
     def _fetch(self) -> None:
         data = json.loads(urlopen(self.EOL_DATA_URL).read())  # noqa: S310
         for version, info in data.items():
-            eol_parts = [int(part) for part in info["end_of_life"].split("-")]
-            if len(eol_parts) == 2:  # noqa: PLR2004
-                year, month = eol_parts
-                if month == 12:  # noqa: PLR2004
-                    month = 1
-                    year += 1
-                else:
-                    month += 1
-                day = 1
-            else:
-                year, month, day = eol_parts
-            self._dates[version] = date(year, month, day)
+            bol_date = self._to_date(info["first_release"])
+            eol_date = self._to_date(info["end_of_life"])
+            self._dates[version] = (bol_date, eol_date)
 
 
-eol_dates = _LazyEOLDates()
+python_dates = _LazyPythonDates()
 """A dictionary of Python versions and their End of Life dates."""

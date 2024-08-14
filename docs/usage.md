@@ -7,14 +7,16 @@ Yore lets you write `# YORE` comments in your code base to mark some lines of bl
 The syntax is as follows:
 
 ```python
-# YORE: <eol|bump> <VERSION>: remove <file|block|line>.
-# YORE: <eol|bump> <VERSION>: replace <file|block|line> with line <LINENO>.
-# YORE: <eol|bump> <VERSION>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-# YORE: <eol|bump> <VERSION>: replace <file|block|line> with `<STRING>`.
-# YORE: <eol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
+# YORE: <eol|bol|bump> <VERSION>: remove <file|block|line>.
+# YORE: <eol|bol|bump> <VERSION>: replace <file|block|line> with line <LINENO>.
+# YORE: <eol|bol|bump> <VERSION>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+# YORE: <eol|bol|bump> <VERSION>: replace <file|block|line> with `<STRING>`.
+# YORE: <eol|bol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
 ```
 
 Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional. Uppercase terms are placeholders that you should replace with actual values, while lowercase terms are keywords that you should use literally. Everything except placeholders is case-insensitive.
+
+Terms `eol`, `bol` and `bump` mean "End of Life", "Beginning of Life" and "version bump", respectively.
 
 Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope. 
 
@@ -155,7 +157,7 @@ if something_else:  # Indent = 0, not part of the block above.
 
 ### `yore check`
 
-Once you have written a few Yore-comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL date of a Python version, use the `-w`, `--warn-before-eol` option. To specify the upcoming project version, use the `-b`, `--bump` option.
+Once you have written a few Yore-comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL (End of Life) date of a Python version, use the `-E`, `--eol-within` option. If you want to be warned before the BOL (Beginning of Life) date of a Python version, use the `-B`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
 
 ```console
 % yore check --warn-before-eol '5 months' --bump 1.0
@@ -196,7 +198,7 @@ yore check src scripts/this_module.py docs/*.py
 
 ### `yore fix`
 
-Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace line or blocks of code, but only when a Python version has reached its End of Life date or when the provided upcoming project version is equal to or higher than the one specified in the comments. All comments that would not emit warnings will be left untouched. The `-w`, `--warn-before-eol` becomes `-f`, `--fix-before-eol`. The `-b`, `--bump` option stays the same.
+Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace line or blocks of code, but only when a Python version has reached its End of Life date or when the provided upcoming project version is equal to or higher than the one specified in the comments. All comments that would not emit warnings will be left untouched.
 
 ```console
 % yore fix -f5m -b1

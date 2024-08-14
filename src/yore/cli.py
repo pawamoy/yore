@@ -101,12 +101,25 @@ class CommandCheck(HelpOption):
         Doc("The next version of your project."),
     ] = None
 
-    warn_before_eol: An[
+    eol_within: An[
         timedelta | None,
-        cappa.Arg(short=True, long=True, parse=_parse_timedelta),
+        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta),
         Doc(
             """
             The time delta to start checking before the End of Life of a Python version.
+            It is provided in a human-readable format, like `2 weeks` or `1 month`.
+            Spaces are optional, and the unit can be shortened to a single letter:
+            `d` for days, `w` for weeks, `m` for months, and `y` for years.
+            """,
+        ),
+    ] = None
+
+    bol_within: An[
+        timedelta | None,
+        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta),
+        Doc(
+            """
+            The time delta to start checking before the Beginning of Life of a Python version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -118,7 +131,7 @@ class CommandCheck(HelpOption):
         paths = self.paths or [Path(".")]
         for path in paths:
             for comment in yield_path_comments(path):
-                comment.check(bump=self.bump, warn_before_eol=self.warn_before_eol)
+                comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
         return 0
 
 
@@ -147,12 +160,25 @@ class CommandFix(HelpOption):
         Doc("The next version of your project."),
     ] = None
 
-    fix_before_eol: An[
+    eol_within: An[
         timedelta | None,
-        cappa.Arg(short=True, long=True, parse=_parse_timedelta),
+        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta),
         Doc(
             """
             The time delta to start fixing before the End of Life of a Python version.
+            It is provided in a human-readable format, like `2 weeks` or `1 month`.
+            Spaces are optional, and the unit can be shortened to a single letter:
+            `d` for days, `w` for weeks, `m` for months, and `y` for years.
+            """,
+        ),
+    ] = None
+
+    bol_within: An[
+        timedelta | None,
+        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta),
+        Doc(
+            """
+            The time delta to start fixing before the Beginning of Life of a Python version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -164,7 +190,7 @@ class CommandFix(HelpOption):
         lines = file.read_text().splitlines(keepends=True)
         count = 0
         for comment in sorted(yield_buffer_comments(file, lines), key=lambda c: c.lineno, reverse=True):
-            if comment.fix(buffer=lines, bump=self.bump, fix_before_eol=self.fix_before_eol):
+            if comment.fix(buffer=lines, bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within):
                 count += 1
         if count:
             file.write_text("".join(lines))
