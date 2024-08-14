@@ -97,13 +97,13 @@ class CommandCheck(HelpOption):
 
     bump: An[
         str | None,
-        cappa.Arg(short=True, long=True),
+        cappa.Arg(short=True, long=True, value_name="VERSION"),
         Doc("The next version of your project."),
     ] = None
 
     eol_within: An[
         timedelta | None,
-        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta),
+        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
             The time delta to start checking before the End of Life of a Python version.
@@ -116,7 +116,7 @@ class CommandCheck(HelpOption):
 
     bol_within: An[
         timedelta | None,
-        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta),
+        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
             The time delta to start checking before the Beginning of Life of a Python version.
@@ -156,13 +156,13 @@ class CommandFix(HelpOption):
 
     bump: An[
         str | None,
-        cappa.Arg(short=True, long=True),
+        cappa.Arg(short=True, long=True, value_name="VERSION"),
         Doc("The next version of your project."),
     ] = None
 
     eol_within: An[
         timedelta | None,
-        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta),
+        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
             The time delta to start fixing before the End of Life of a Python version.
@@ -175,7 +175,7 @@ class CommandFix(HelpOption):
 
     bol_within: An[
         timedelta | None,
-        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta),
+        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
             The time delta to start fixing before the Beginning of Life of a Python version.
