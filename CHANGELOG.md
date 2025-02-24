@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.3.1](https://github.com/pawamoy/yore/releases/tag/0.3.1) - 2025-02-24
+
+<small>[Compare with 0.3.0](https://github.com/pawamoy/yore/compare/0.3.0...0.3.1)</small>
+
+### Code Refactoring
+
+- Move modules under `_internal`, update docs ([7d59de0](https://github.com/pawamoy/yore/commit/7d59de0593a79bb7be46fda3008bae36cb8eadc9) by Timothée Mazzucotelli).
+
 ## [0.3.0](https://github.com/pawamoy/yore/releases/tag/0.3.0) - 2025-02-24
 
 <small>[Compare with 0.2.0](https://github.com/pawamoy/yore/compare/0.2.0...0.3.0)</small>
