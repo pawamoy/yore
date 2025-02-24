@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.3.0](https://github.com/pawamoy/yore/releases/tag/0.3.0) - 2025-02-24
+
+<small>[Compare with 0.2.0](https://github.com/pawamoy/yore/compare/0.2.0...0.3.0)</small>
+
+### Features
+
+- Support Python 3.9 ([2add5f8](https://github.com/pawamoy/yore/commit/2add5f8d97dfb043ab5b4bb3afe08e7333392937) by Timothée Mazzucotelli). [Issue-9](https://github.com/pawamoy/yore/issues/9)
+
 ## [0.2.0](https://github.com/pawamoy/yore/releases/tag/0.2.0) - 2024-08-14
 
 <small>[Compare with 0.1.0](https://github.com/pawamoy/yore/compare/0.1.0...0.2.0)</small>
