@@ -1,0 +1,1066 @@
+# yore
+
+Manage legacy code with comments.
+
+> In days of yore, ancients penned scripts of eld, their legacy code a relic of arcane lore. These venerable lines, cryptic and profound, whisper the wisdom of bygone masters, shaping our digital realm's very ground.
+>
+> — ChatGPT the Sage
+
+With time, the code base of your project evolves. You add features, you fix bugs, and you generally reorganize code. Some of these changes might make your project's public API incompatible with previous versions. In that case, you usually have to "deprecate" previous usage in favor of the new usage. That means you have to support both usages, and emit deprecation warnings when old usage is detected.
+
+Sometimes, you don't change anything in an incompatible way, but you want to support multiple versions of Python which provide different, incompatible APIs, or for which libraries you depend on provide different, incompatible APIs. In that case, you have to write multiple code branches to support the different Python versions. The code branches for versions of Python older than the latest one are what we call legacy code. Ideally you'd want to only use the API and features of the latest Python version, but your users are sometimes stuck with older versions, and you want to follow the official Python release cycle, which promises support for a certain amount of time after initial release for each minor version (3.11, 3.12, etc.). At the time of writing (2024, see [Python release cycle](https://devguide.python.org/versions/) for up-to-date information), each minor version is supported for approximately 5 years. There's a new minor version each year, so if you follow the release cycle, you maintain support for a window of 5 minor Python versions at any time. Sometimes you will have to support much older versions...
+
+For these use-cases, Yore comes to the rescue.
+
+Yore was born from the will of automating comments I had added along the evolution of my projects. I was usually writing comments such as `TODO: Remove once support for Python 3.8 is dropped`, or `TODO: Remove when we are ready for v1`. One day I decided to make these comments more formal, so I designed a very simple syntax and wrote a tool that would parse them and act on them.
+
+Yore can therefore find comments in your code base, to warn you about upcoming end-of-life dates of Python versions, or outdated code based on the project version. It can also apply transformations to your code, to remove legacy blocks or lines of code or update them.
+
+## Quick usage
+
+Write Yore-comments:
+
+```
+# YORE: EOL 3.8: Replace block with line 4.
+if sys.version_info < (3, 9):
+    from astunparse import unparse
+else:
+    from ast import unparse
+
+```
+
+Check your code base:
+
+```
+$ yore check --eol-within '5 months'
+./src/griffe/agents/nodes/_values.py:11: Python 3.8 will reach its End of Life within approx. 4 months
+
+```
+
+Fix your code base:
+
+```
+$ yore fix --eol-within '5 months'
+fixed 1 comment in ./src/griffe/agents/nodes/_values.py
+
+```
+
+```
+diff --git a/src/griffe/agents/nodes/_values.py b/src/griffe/agents/nodes/_values.py
+index 59bfacac..2f6eaa88 100644
+--- a/src/griffe/agents/nodes/_values.py
++++ b/src/griffe/agents/nodes/_values.py
+@@ -8,11 +8,7 @@ from typing import TYPE_CHECKING
+
+ from griffe.logger import get_logger
+
+-# YORE: EOL 3.8: Replace block with line 4.
+-if sys.version_info < (3, 9):
+-    from astunparse import unparse
+-else:
+-    from ast import unparse
++from ast import unparse
+
+ if TYPE_CHECKING:
+     from pathlib import Path
+
+```
+
+See the [usage documentation](https://pawamoy.github.io/yore/usage).
+
+## Installation
+
+```
+pip install yore
+
+```
+
+With [`uv`](https://docs.astral.sh/uv/):
+
+```
+uv tool install yore
+
+```
+
+# yore
+
+yore package.
+
+Manage legacy code with comments.
+
+Classes:
+
+- **`CommandCheck`** – Command to check Yore comments.
+- **`CommandFix`** – Command to fix Yore comments.
+- **`CommandMain`** – Command to manage legacy code in your code base with YORE comments.
+- **`YoreComment`** – A Yore-comment.
+
+Functions:
+
+- **`main`** – Run the main program.
+- **`yield_buffer_comments`** – Yield all Yore-comments in a buffer.
+- **`yield_directory_comments`** – Yield all Yore-comments in a directory.
+- **`yield_file_comments`** – Yield all Yore-comments in a file.
+- **`yield_path_comments`** – Yield all Yore-comments in a file or directory.
+- **`yield_python_files`** – Yield all Python files in a directory.
+
+Attributes:
+
+- **`COMMENT_PATTERN`** – The Yore-comment pattern, as a regular expression.
+- **`DEFAULT_EXCLUDE`** – The default patterns to exclude when scanning directories.
+- **`DEFAULT_PREFIX`** – The default prefix for Yore-comments.
+- **`Scope`** – The scope of a comment.
+- **`YoreKind`** – The supported kinds of Yore-comments.
+- **`python_dates`** – A dictionary of Python versions and their End of Life dates.
+
+## COMMENT_PATTERN
+
+```
+COMMENT_PATTERN = "\n    ^\\s*\n    \\#\\ {prefix}:\\ (?P<kind>bump|eol)\\ (?P<version>[^:]+):\\ (?:\n        remove\\ (?P<remove>block|file|line)\n        |\n        replace\\ (?P<replace>block|file|line)\\ with\\ (?:\n            line\\ (?P<line>\\d+)\n            |\n            lines\\ (?P<lines>[\\d, -]+)\n            |\n            `(?P<string>.+)`\n        )\n        |\n        (?P<regex>regex-)?replace\\ `(?P<pattern1>.+)`\\ with\\ `(?P<pattern2>.*)`\\ within\\ (?P<within>block|file|line)\n    )\\.?.*$\n"
+
+```
+
+The Yore-comment pattern, as a regular expression.
+
+## DEFAULT_EXCLUDE
+
+```
+DEFAULT_EXCLUDE = ['.*', '__py*', 'build', 'dist']
+
+```
+
+The default patterns to exclude when scanning directories.
+
+## DEFAULT_PREFIX
+
+```
+DEFAULT_PREFIX = 'YORE'
+
+```
+
+The default prefix for Yore-comments.
+
+## Scope
+
+```
+Scope = Literal['block', 'file', 'line']
+
+```
+
+The scope of a comment.
+
+## YoreKind
+
+```
+YoreKind = Literal['bump', 'eol', 'bol']
+
+```
+
+The supported kinds of Yore-comments.
+
+## python_dates
+
+```
+python_dates = _LazyPythonDates()
+
+```
+
+A dictionary of Python versions and their End of Life dates.
+
+## CommandCheck
+
+```
+CommandCheck(
+    paths: list[Path] = list(),
+    bump: str | None = None,
+    eol_within: timedelta | None = None,
+    bol_within: timedelta | None = None,
+)
+
+```
+
+Command to check Yore comments.
+
+Methods:
+
+- **`__call__`** – Check Yore comments.
+
+Attributes:
+
+- **`bol_within`** (`timedelta | None`) – The time delta to start checking before the Beginning of Life of a Python version.
+- **`bump`** (`str | None`) – The next version of your project.
+- **`eol_within`** (`timedelta | None`) – The time delta to start checking before the End of Life of a Python version.
+- **`paths`** (`list[Path]`) – Path to files or directories to check.
+
+### bol_within
+
+```
+bol_within: timedelta | None = None
+
+```
+
+The time delta to start checking before the Beginning of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
+
+### bump
+
+```
+bump: str | None = None
+
+```
+
+The next version of your project.
+
+### eol_within
+
+```
+eol_within: timedelta | None = None
+
+```
+
+The time delta to start checking before the End of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
+
+### paths
+
+```
+paths: list[Path] = field(default_factory=list)
+
+```
+
+Path to files or directories to check.
+
+### __call__
+
+```
+__call__() -> Any
+
+```
+
+Check Yore comments.
+
+Source code in `src/yore/_internal/cli.py`
+
+```
+def __call__(self) -> Any:
+    """Check Yore comments."""
+    paths = self.paths or [Path(".")]
+    for path in paths:
+        for comment in yield_path_comments(path):
+            comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
+    return 0
+
+```
+
+## CommandFix
+
+```
+CommandFix(
+    paths: list[Path] = list(),
+    bump: str | None = None,
+    eol_within: timedelta | None = None,
+    bol_within: timedelta | None = None,
+)
+
+```
+
+Command to fix Yore comments.
+
+Methods:
+
+- **`__call__`** – Fix Yore comments.
+
+Attributes:
+
+- **`bol_within`** (`timedelta | None`) – The time delta to start fixing before the Beginning of Life of a Python version.
+- **`bump`** (`str | None`) – The next version of your project.
+- **`eol_within`** (`timedelta | None`) – The time delta to start fixing before the End of Life of a Python version.
+- **`paths`** (`list[Path]`) – Path to files or directories to fix.
+
+### bol_within
+
+```
+bol_within: timedelta | None = None
+
+```
+
+The time delta to start fixing before the Beginning of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
+
+### bump
+
+```
+bump: str | None = None
+
+```
+
+The next version of your project.
+
+### eol_within
+
+```
+eol_within: timedelta | None = None
+
+```
+
+The time delta to start fixing before the End of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
+
+### paths
+
+```
+paths: list[Path] = field(default_factory=list)
+
+```
+
+Path to files or directories to fix.
+
+### __call__
+
+```
+__call__() -> Any
+
+```
+
+Fix Yore comments.
+
+Source code in `src/yore/_internal/cli.py`
+
+```
+def __call__(self) -> Any:
+    """Fix Yore comments."""
+    paths = self.paths or [Path(".")]
+    for path in paths:
+        if path.is_file():
+            self._fix(path)
+        else:
+            for file in yield_python_files(path):
+                self._fix(file)
+
+    return 0
+
+```
+
+## CommandMain
+
+```
+CommandMain(
+    subcommand: Subcommands[CommandCheck | CommandFix],
+    version: bool = False,
+    debug_info: bool = False,
+    completion: bool = False,
+)
+
+```
+
+Command to manage legacy code in your code base with YORE comments.
+
+Attributes:
+
+- **`completion`** (`bool`) – Completion CLI option.
+- **`debug_info`** (`bool`) – Print debug information.
+- **`subcommand`** (`Subcommands[CommandCheck | CommandFix]`) – The selected subcommand.
+- **`version`** (`bool`) – Version CLI option.
+
+### completion
+
+```
+completion: bool = False
+
+```
+
+Completion CLI option.
+
+### debug_info
+
+```
+debug_info: bool = False
+
+```
+
+Print debug information.
+
+### subcommand
+
+```
+subcommand: Subcommands[CommandCheck | CommandFix]
+
+```
+
+The selected subcommand.
+
+### version
+
+```
+version: bool = False
+
+```
+
+Version CLI option.
+
+## YoreComment
+
+```
+YoreComment(
+    file: Path,
+    lineno: int,
+    raw: str,
+    kind: YoreKind,
+    version: str,
+    remove: Scope | None = None,
+    replace: Scope | None = None,
+    line: int | None = None,
+    lines: list[int] | None = None,
+    string: str | None = None,
+    regex: bool = False,
+    pattern1: str | None = None,
+    pattern2: str | None = None,
+    within: Scope | None = None,
+)
+
+```
+
+A Yore-comment.
+
+Methods:
+
+- **`check`** – Check the comment.
+- **`fix`** – Fix the comment and code below it.
+
+Attributes:
+
+- **`bol`** (`date`) – The Beginning of Life date for the Python version.
+- **`eol`** (`date`) – The End of Life date for the Python version.
+- **`file`** (`Path`) – The file containing comment.
+- **`is_bol`** (`bool`) – Whether the comment is an End of Life comment.
+- **`is_bump`** (`bool`) – Whether the comment is a bump comment.
+- **`is_eol`** (`bool`) – Whether the comment is an End of Life comment.
+- **`kind`** (`YoreKind`) – The kind of comment.
+- **`line`** (`int | None`) – The line to replace.
+- **`lineno`** (`int`) – The line number of the comment.
+- **`lines`** (`list[int] | None`) – The lines to replace.
+- **`pattern1`** (`str | None`) – The pattern to replace.
+- **`pattern2`** (`str | None`) – The replacement pattern.
+- **`raw`** (`str`) – The raw comment.
+- **`regex`** (`bool`) – Whether to use regex for replacement.
+- **`remove`** (`Scope | None`) – The removal scope.
+- **`replace`** (`Scope | None`) – The replacement scope.
+- **`string`** (`str | None`) – The string to replace.
+- **`version`** (`str`) – The EOL/bump version.
+- **`within`** (`Scope | None`) – The scope to replace within.
+
+### bol
+
+```
+bol: date
+
+```
+
+The Beginning of Life date for the Python version.
+
+### eol
+
+```
+eol: date
+
+```
+
+The End of Life date for the Python version.
+
+### file
+
+```
+file: Path
+
+```
+
+The file containing comment.
+
+### is_bol
+
+```
+is_bol: bool
+
+```
+
+Whether the comment is an End of Life comment.
+
+### is_bump
+
+```
+is_bump: bool
+
+```
+
+Whether the comment is a bump comment.
+
+### is_eol
+
+```
+is_eol: bool
+
+```
+
+Whether the comment is an End of Life comment.
+
+### kind
+
+```
+kind: YoreKind
+
+```
+
+The kind of comment.
+
+### line
+
+```
+line: int | None = None
+
+```
+
+The line to replace.
+
+### lineno
+
+```
+lineno: int
+
+```
+
+The line number of the comment.
+
+### lines
+
+```
+lines: list[int] | None = None
+
+```
+
+The lines to replace.
+
+### pattern1
+
+```
+pattern1: str | None = None
+
+```
+
+The pattern to replace.
+
+### pattern2
+
+```
+pattern2: str | None = None
+
+```
+
+The replacement pattern.
+
+### raw
+
+```
+raw: str
+
+```
+
+The raw comment.
+
+### regex
+
+```
+regex: bool = False
+
+```
+
+Whether to use regex for replacement.
+
+### remove
+
+```
+remove: Scope | None = None
+
+```
+
+The removal scope.
+
+### replace
+
+```
+replace: Scope | None = None
+
+```
+
+The replacement scope.
+
+### string
+
+```
+string: str | None = None
+
+```
+
+The string to replace.
+
+### version
+
+```
+version: str
+
+```
+
+The EOL/bump version.
+
+### within
+
+```
+within: Scope | None = None
+
+```
+
+The scope to replace within.
+
+### check
+
+```
+check(
+    *,
+    bump: str | None = None,
+    eol_within: timedelta | None = None,
+    bol_within: timedelta | None = None,
+) -> None
+
+```
+
+Check the comment.
+
+Parameters:
+
+- #### **`bump`**
+
+  (`str | None`, default: `None` ) – The next version of the project.
+
+- #### **`eol_within`**
+
+  (`timedelta | None`, default: `None` ) – The time delta to start warning before the End of Life of a Python version.
+
+- #### **`bol_within`**
+
+  (`timedelta | None`, default: `None` ) – The time delta to start warning before the Beginning of Life of a Python version.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def check(
+    self,
+    *,
+    bump: str | None = None,
+    eol_within: TimeDelta | None = None,
+    bol_within: TimeDelta | None = None,
+) -> None:
+    """Check the comment.
+
+    Parameters:
+        bump: The next version of the project.
+        eol_within: The time delta to start warning before the End of Life of a Python version.
+        bol_within: The time delta to start warning before the Beginning of Life of a Python version.
+    """
+    msg_location = f"{self.file}:{self.lineno}: "
+    if self.is_eol:
+        if eol_within and _within(eol_within, self.eol):
+            _logger.warning(
+                f"{msg_location}Python {self.version} will reach its End of Life within approx. {naturaldelta(_delta(self.eol))}",
+            )
+        elif _within(TimeDelta(days=0), self.eol):
+            _logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
+    elif self.is_bol:
+        if bol_within and _within(bol_within, self.bol):
+            _logger.warning(
+                f"{msg_location}Python {self.version} will be released within approx. {naturaldelta(_delta(self.bol))}",
+            )
+        elif _within(TimeDelta(days=0), self.bol):
+            _logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
+    elif self.is_bump and bump and Version(bump) >= Version(self.version):
+        _logger.error(
+            f"{msg_location}Code is scheduled for update/removal in {self.version} which is older than or equal to {bump}",
+        )
+
+```
+
+### fix
+
+```
+fix(
+    buffer: list[str] | None = None,
+    *,
+    bump: str | None = None,
+    eol_within: timedelta | None = None,
+    bol_within: timedelta | None = None,
+) -> bool
+
+```
+
+Fix the comment and code below it.
+
+Parameters:
+
+- #### **`buffer`**
+
+  (`list[str] | None`, default: `None` ) – The buffer to fix. If not provided, read from and write to the file.
+
+- #### **`bump`**
+
+  (`str | None`, default: `None` ) – The next version of the project.
+
+- #### **`eol_within`**
+
+  (`timedelta | None`, default: `None` ) – The time delta to start fixing before the End of Life of a Python version.
+
+- #### **`bol_within`**
+
+  (`timedelta | None`, default: `None` ) – The time delta to start fixing before the Beginning of Life of a Python version.
+
+Returns:
+
+- `bool` – Whether the comment was fixed.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def fix(
+    self,
+    buffer: list[str] | None = None,
+    *,
+    bump: str | None = None,
+    eol_within: TimeDelta | None = None,
+    bol_within: TimeDelta | None = None,
+) -> bool:
+    """Fix the comment and code below it.
+
+    Parameters:
+        buffer: The buffer to fix. If not provided, read from and write to the file.
+        bump: The next version of the project.
+        eol_within: The time delta to start fixing before the End of Life of a Python version.
+        bol_within: The time delta to start fixing before the Beginning of Life of a Python version.
+
+    Returns:
+        Whether the comment was fixed.
+    """
+    write = buffer is None
+    buffer = buffer or self.file.read_text().splitlines(keepends=True)
+
+    # Check if the fix should be applied.
+    if (
+        (self.is_eol and ((eol_within and _within(eol_within, self.eol)) or _within(TimeDelta(days=0), self.eol)))
+        or (
+            self.is_bol and ((bol_within and _within(bol_within, self.bol)) or _within(TimeDelta(days=0), self.bol))
+        )
+        or (self.is_bump and bump and Version(bump) >= Version(self.version))
+    ):
+        # Start at the commnent line, immediately remove it.
+        start = self.lineno - 1
+        del buffer[start]
+
+        if self.remove:
+            start, end = _scope_range(self.remove, buffer, start)
+            del buffer[start:end]
+            if self.remove == "file":
+                self.file.unlink()
+
+        elif self.replace:
+            # Line numbers/ranges are relative to block starts, absolute for the "file" scope.
+            start, end = _scope_range(self.replace, buffer, start)
+            if self.line:
+                replacement = [buffer[start + self.line - 1]]
+            elif self.lines:
+                replacement = [buffer[start + line] for line in self.lines]
+            elif self.string:
+                replacement = [self.string + "\n"]
+            else:
+                raise RuntimeError("No replacement specified")
+            replacement = _reindent(replacement, _indent(buffer[start]))
+            buffer[start:end] = replacement
+
+        elif self.within:
+            # Line numbers/ranges are relative to block starts, absolute for the "file" scope.
+            start, end = _scope_range(self.within, buffer, start)
+            block = buffer[start:end]
+            if self.regex:
+                pattern1: Pattern = re.compile(self.pattern1)
+                replacement = [pattern1.sub(self.pattern2, line) for line in block]
+            else:
+                replacement = [line.replace(self.pattern1, self.pattern2) for line in block]  # type: ignore[arg-type]
+            replacement = _reindent(replacement, _indent(buffer[start]))
+            buffer[start:end] = replacement
+
+        if write and buffer:
+            self.file.write_text("".join(buffer))
+
+        return True
+    return False
+
+```
+
+## main
+
+```
+main(args: list[str] | None = None) -> int
+
+```
+
+Run the main program.
+
+This function is executed when you type `yore` or `python -m yore`.
+
+Parameters:
+
+- ### **`args`**
+
+  (`list[str] | None`, default: `None` ) – Arguments passed from the command line.
+
+Returns:
+
+- `int` – An exit code.
+
+Source code in `src/yore/_internal/cli.py`
+
+```
+def main(
+    args: An[list[str] | None, Doc("Arguments passed from the command line.")] = None,
+) -> An[int, Doc("An exit code.")]:
+    """Run the main program.
+
+    This function is executed when you type `yore` or `python -m yore`.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    output = cappa.Output(error_format=f"[bold]{_NAME}[/]: [bold red]error[/]: {{message}}")
+    help_option: cappa.Arg = cappa.Arg(
+        short="-h",
+        long=True,
+        action=cappa.ArgAction.help,
+        help="Print the program help and exit.",
+    )
+    try:
+        return cappa.invoke(
+            CommandMain,
+            argv=args,
+            output=output,
+            backend=cappa.backend,
+            completion=False,
+            help=help_option,
+        )
+    except cappa.Exit as error:
+        if error.message:
+            print(error.message, file=sys.stderr)
+        return int(1 if error.code is None else error.code)
+
+```
+
+## yield_buffer_comments
+
+```
+yield_buffer_comments(
+    file: Path,
+    lines: list[str],
+    *,
+    prefix: str = DEFAULT_PREFIX,
+) -> Iterator[YoreComment]
+
+```
+
+Yield all Yore-comments in a buffer.
+
+Parameters:
+
+- ### **`file`**
+
+  (`Path`) – The file to check.
+
+- ### **`lines`**
+
+  (`list[str]`) – The buffer to check (pre-read lines).
+
+- ### **`prefix`**
+
+  (`str`, default: `DEFAULT_PREFIX` ) – The prefix to look for in the comments.
+
+Yields:
+
+- `YoreComment` – Yore-comments.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+    """Yield all Yore-comments in a buffer.
+
+    Parameters:
+        file: The file to check.
+        lines: The buffer to check (pre-read lines).
+        prefix: The prefix to look for in the comments.
+
+    Yields:
+        Yore-comments.
+    """
+    regex = re.compile(COMMENT_PATTERN.format(prefix=prefix), re.VERBOSE | re.IGNORECASE)
+    for lineno, line in enumerate(lines, 1):
+        if match := regex.match(line):
+            yield _match_to_comment(match, file, lineno)
+
+```
+
+## yield_directory_comments
+
+```
+yield_directory_comments(
+    directory: Path, *, prefix: str = DEFAULT_PREFIX
+) -> Iterator[YoreComment]
+
+```
+
+Yield all Yore-comments in a directory.
+
+Parameters:
+
+- ### **`directory`**
+
+  (`Path`) – The directory to check.
+
+- ### **`prefix`**
+
+  (`str`, default: `DEFAULT_PREFIX` ) – The prefix to look for in the comments.
+
+Yields:
+
+- `YoreComment` – Yore-comments.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+    """Yield all Yore-comments in a directory.
+
+    Parameters:
+        directory: The directory to check.
+        prefix: The prefix to look for in the comments.
+
+    Yields:
+        Yore-comments.
+    """
+    for file in yield_python_files(directory):
+        yield from yield_file_comments(file, prefix=prefix)
+
+```
+
+## yield_file_comments
+
+```
+yield_file_comments(
+    file: Path, *, prefix: str = DEFAULT_PREFIX
+) -> Iterator[YoreComment]
+
+```
+
+Yield all Yore-comments in a file.
+
+Parameters:
+
+- ### **`file`**
+
+  (`Path`) – The file to check.
+
+- ### **`prefix`**
+
+  (`str`, default: `DEFAULT_PREFIX` ) – The prefix to look for in the comments.
+
+Yields:
+
+- `YoreComment` – Yore-comments.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+    """Yield all Yore-comments in a file.
+
+    Parameters:
+        file: The file to check.
+        prefix: The prefix to look for in the comments.
+
+    Yields:
+        Yore-comments.
+    """
+    try:
+        lines = file.read_text().splitlines()
+    except OSError:
+        return
+    yield from yield_buffer_comments(file, lines, prefix=prefix)
+
+```
+
+## yield_path_comments
+
+```
+yield_path_comments(
+    path: Path, *, prefix: str = DEFAULT_PREFIX
+) -> Iterator[YoreComment]
+
+```
+
+Yield all Yore-comments in a file or directory.
+
+Parameters:
+
+- ### **`path`**
+
+  (`Path`) – The file or directory to check.
+
+- ### **`prefix`**
+
+  (`str`, default: `DEFAULT_PREFIX` ) – The prefix to look for in the comments.
+
+Yields:
+
+- `YoreComment` – Yore-comments.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+    """Yield all Yore-comments in a file or directory.
+
+    Parameters:
+        path: The file or directory to check.
+        prefix: The prefix to look for in the comments.
+
+    Yields:
+        Yore-comments.
+    """
+    if path.is_dir():
+        yield from yield_directory_comments(path, prefix=prefix)
+    else:
+        yield from yield_file_comments(path, prefix=prefix)
+
+```
+
+## yield_python_files
+
+```
+yield_python_files(
+    directory: Path, exclude: list[str] | None = None
+) -> Iterator[Path]
+
+```
+
+Yield all Python files in a directory.
+
+Source code in `src/yore/_internal/lib.py`
+
+```
+def yield_python_files(directory: Path, exclude: list[str] | None = None) -> Iterator[Path]:
+    """Yield all Python files in a directory."""
+    exclude = DEFAULT_EXCLUDE if exclude is None else exclude
+    _logger.debug(f"{directory}: scanning...")
+    for path in directory.iterdir():
+        if path.is_file() and path.suffix == ".py":
+            yield path
+        elif path.is_dir() and not any(path.match(pattern) for pattern in exclude):
+            yield from yield_python_files(path, exclude=exclude)
+
+```
