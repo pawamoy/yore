@@ -222,8 +222,10 @@ class YoreComment:
 
         # Check if the fix should be applied.
         if (
-            (self.is_eol and (eol_within and _within(eol_within, self.eol) or _within(TimeDelta(days=0), self.eol)))
-            or (self.is_bol and (bol_within and _within(bol_within, self.bol) or _within(TimeDelta(days=0), self.bol)))
+            (self.is_eol and ((eol_within and _within(eol_within, self.eol)) or _within(TimeDelta(days=0), self.eol)))
+            or (
+                self.is_bol and ((bol_within and _within(bol_within, self.bol)) or _within(TimeDelta(days=0), self.bol))
+            )
             or (self.is_bump and bump and Version(bump) >= Version(self.version))
         ):
             # Start at the commnent line, immediately remove it.
