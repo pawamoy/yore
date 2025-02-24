@@ -1,5 +1,3 @@
-"""Module that contains the command line application."""
-
 # Why does this file exist, and why not put this in `__main__`?
 #
 # You might be tempted to import things from `__main__` later,
@@ -27,20 +25,20 @@ from typing import Any, Callable
 import cappa
 from typing_extensions import Doc
 
-from yore import debug
-from yore.lib import yield_buffer_comments, yield_path_comments, yield_python_files
+from yore._internal import debug
+from yore._internal.lib import yield_buffer_comments, yield_path_comments, yield_python_files
 
-NAME = "yore"
+_NAME = "yore"
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 # YORE: EOL 3.9: Remove block.
-dataclass_opts: dict[str, bool] = {}
+_dataclass_opts: dict[str, bool] = {}
 if sys.version_info >= (3, 10):
-    dataclass_opts["kw_only"] = True
+    _dataclass_opts["kw_only"] = True
 
 
-def print_and_exit(
+def _print_and_exit(
     func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
     code: An[int, Doc("The status code to exit with.")] = 0,
 ) -> Callable[[], None]:
@@ -71,7 +69,7 @@ def _parse_timedelta(value: str) -> timedelta:
     ),
 )
 # YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
-@dataclass(**dataclass_opts)
+@dataclass(**_dataclass_opts)
 class CommandCheck:
     """Command to check Yore comments."""
 
@@ -113,7 +111,8 @@ class CommandCheck:
         ),
     ] = None
 
-    def __call__(self) -> Any:  # noqa: D102
+    def __call__(self) -> Any:
+        """Check Yore comments."""
         paths = self.paths or [Path(".")]
         for path in paths:
             for comment in yield_path_comments(path):
@@ -131,7 +130,7 @@ class CommandCheck:
     ),
 )
 # YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
-@dataclass(**dataclass_opts)
+@dataclass(**_dataclass_opts)
 class CommandFix:
     """Command to fix Yore comments."""
 
@@ -181,9 +180,10 @@ class CommandFix:
                 count += 1
         if count:
             file.write_text("".join(lines))
-            logger.info(f"fixed {count} comment{'s' if count > 1 else ''} in {file}")
+            _logger.info(f"fixed {count} comment{'s' if count > 1 else ''} in {file}")
 
-    def __call__(self) -> Any:  # noqa: D102
+    def __call__(self) -> Any:
+        """Fix Yore comments."""
         paths = self.paths or [Path(".")]
         for path in paths:
             if path.is_file():
@@ -196,7 +196,7 @@ class CommandFix:
 
 
 @cappa.command(
-    name=NAME,
+    name=_NAME,
     help="Manage legacy code in your code base with YORE comments.",
     description=cleandoc(
         """
@@ -252,7 +252,7 @@ class CommandFix:
     ),
 )
 # YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
-@dataclass(**dataclass_opts)
+@dataclass(**_dataclass_opts)
 class CommandMain:
     """Command to manage legacy code in your code base with YORE comments."""
 
@@ -263,15 +263,16 @@ class CommandMain:
         cappa.Arg(
             short="-V",
             long=True,
-            action=print_and_exit(debug.get_version),
+            action=_print_and_exit(debug._get_version),
             num_args=0,
             help="Print the program version and exit.",
         ),
+        Doc("Version CLI option."),
     ] = False
 
     debug_info: An[
         bool,
-        cappa.Arg(long=True, action=print_and_exit(debug.print_debug_info), num_args=0),
+        cappa.Arg(long=True, action=_print_and_exit(debug._print_debug_info), num_args=0),
         Doc("Print debug information."),
     ] = False
 
@@ -283,6 +284,7 @@ class CommandMain:
             choices=("complete", "generate"),
             help="Print shell-specific completion source.",
         ),
+        Doc("Completion CLI option."),
     ] = False
 
 
@@ -294,18 +296,23 @@ def main(
     This function is executed when you type `yore` or `python -m yore`.
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    output = cappa.Output(error_format=f"[bold]{NAME}[/]: [bold red]error[/]: {{message}}")
+    output = cappa.Output(error_format=f"[bold]{_NAME}[/]: [bold red]error[/]: {{message}}")
     help_option: cappa.Arg = cappa.Arg(
         short="-h",
         long=True,
         action=cappa.ArgAction.help,
         help="Print the program help and exit.",
     )
-    return cappa.invoke(
-        CommandMain,
-        argv=args,
-        output=output,
-        backend=cappa.backend,
-        completion=False,
-        help=help_option,
-    )
+    try:
+        return cappa.invoke(
+            CommandMain,
+            argv=args,
+            output=output,
+            backend=cappa.backend,
+            completion=False,
+            help=help_option,
+        )
+    except cappa.Exit as error:
+        if error.message:
+            print(error.message, file=sys.stderr)
+        return int(1 if error.code is None else error.code)

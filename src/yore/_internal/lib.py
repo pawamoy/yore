@@ -1,5 +1,3 @@
-"""Library of functions for yore."""
-
 from __future__ import annotations
 
 import json
@@ -10,13 +8,15 @@ from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
 from datetime import timedelta as TimeDelta  # noqa: N812
 from datetime import timezone as TimeZone  # noqa: N812
-from typing import TYPE_CHECKING, ClassVar, Iterator, Literal, Pattern
+from re import Pattern
+from typing import TYPE_CHECKING, ClassVar, Literal
 from urllib.request import urlopen
 
 from humanize import naturaldelta
 from packaging.version import Version
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
 YoreKind = Literal["bump", "eol", "bol"]
@@ -31,7 +31,7 @@ DEFAULT_PREFIX = "YORE"
 DEFAULT_EXCLUDE = [".*", "__py*", "build", "dist"]
 """The default patterns to exclude when scanning directories."""
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def _indent(line: str) -> int:
@@ -125,19 +125,33 @@ class YoreComment:
     """A Yore-comment."""
 
     file: Path
+    """The file containing comment."""
     lineno: int
+    """The line number of the comment."""
     raw: str
+    """The raw comment."""
     kind: YoreKind
+    """The kind of comment."""
     version: str
+    """The EOL/bump version."""
     remove: Scope | None = None
+    """The removal scope."""
     replace: Scope | None = None
+    """The replacement scope."""
     line: int | None = None
+    """The line to replace."""
     lines: list[int] | None = None
+    """The lines to replace."""
     string: str | None = None
+    """The string to replace."""
     regex: bool = False
+    """Whether to use regex for replacement."""
     pattern1: str | None = None
+    """The pattern to replace."""
     pattern2: str | None = None
+    """The replacement pattern."""
     within: Scope | None = None
+    """The scope to replace within."""
 
     @property
     def is_bol(self) -> bool:
@@ -181,20 +195,20 @@ class YoreComment:
         msg_location = f"{self.file}:{self.lineno}: "
         if self.is_eol:
             if eol_within and _within(eol_within, self.eol):
-                logger.warning(
+                _logger.warning(
                     f"{msg_location}Python {self.version} will reach its End of Life within approx. {naturaldelta(_delta(self.eol))}",
                 )
             elif _within(TimeDelta(days=0), self.eol):
-                logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
+                _logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
         elif self.is_bol:
             if bol_within and _within(bol_within, self.bol):
-                logger.warning(
+                _logger.warning(
                     f"{msg_location}Python {self.version} will be released within approx. {naturaldelta(_delta(self.bol))}",
                 )
             elif _within(TimeDelta(days=0), self.bol):
-                logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
+                _logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
         elif self.is_bump and bump and Version(bump) >= Version(self.version):
-            logger.error(
+            _logger.error(
                 f"{msg_location}Code is scheduled for update/removal in {self.version} which is older than or equal to {bump}",
             )
 
@@ -293,7 +307,7 @@ COMMENT_PATTERN = r"""
 def yield_python_files(directory: Path, exclude: list[str] | None = None) -> Iterator[Path]:
     """Yield all Python files in a directory."""
     exclude = DEFAULT_EXCLUDE if exclude is None else exclude
-    logger.debug(f"{directory}: scanning...")
+    _logger.debug(f"{directory}: scanning...")
     for path in directory.iterdir():
         if path.is_file() and path.suffix == ".py":
             yield path

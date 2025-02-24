@@ -99,9 +99,7 @@ def _fixture_inventory() -> Inventory:
 def test_exposed_objects(modulelevel_internal_objects: list[griffe.Object | griffe.Alias]) -> None:
     """All public objects in the internal API are exposed under `yore`."""
     not_exposed = [
-        obj.path
-        for obj in modulelevel_internal_objects
-        if obj.name not in yore.__all__ or not hasattr(yore, obj.name)
+        obj.path for obj in modulelevel_internal_objects if obj.name not in yore.__all__ or not hasattr(yore, obj.name)
     ]
     assert not not_exposed, "Objects not exposed:\n" + "\n".join(sorted(not_exposed))
 

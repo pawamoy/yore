@@ -20,8 +20,7 @@ nav:
   - Credits: credits.md
   - License: license.md
 - Usage: usage.md
-# defer to gen-files + literate-nav
-- API reference: reference/
+- API reference: reference/yore.md
 - Development:
   - Contributing: contributing.md
   - Code of Conduct: code_of_conduct.md
@@ -103,12 +102,6 @@ markdown_extensions:
 plugins:
 - search
 - markdown-exec
-- section-index
-- gen-files:
-    scripts:
-    - scripts/gen_api_ref.py
-- literate-nav:
-    nav_file: SUMMARY.txt
 - coverage
 - mkdocstrings:
     handlers:
@@ -120,10 +113,13 @@ plugins:
           docstring_options:
             ignore_init_summary: true
           docstring_section_style: list
-          filters: ["!^_"]
+          extensions:
+          - griffe_typingdoc
+          filters: ["!^_", "^__"]
           heading_level: 1
           inherited_members: true
           merge_init_into_class: true
+          parameter_headings: true
           separate_signature: true
           show_root_heading: true
           show_root_full_path: false
@@ -133,6 +129,7 @@ plugins:
           show_symbol_type_toc: true
           signature_crossrefs: true
           summary: true
+          unwrap_annotated: true
 - llmstxt:
     files:
     - output: llms.txt

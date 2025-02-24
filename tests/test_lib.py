@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from yore import lib
+from yore._internal import lib
 
 if TYPE_CHECKING:
     from pathlib import Path
