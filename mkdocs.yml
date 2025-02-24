@@ -21,8 +21,7 @@ nav:
   - License: license.md
 - Usage: usage.md
 # defer to gen-files + literate-nav
-- API reference:
-  - yore: reference/
+- API reference: reference/
 - Development:
   - Contributing: contributing.md
   - Code of Conduct: code_of_conduct.md
@@ -42,7 +41,8 @@ theme:
   - content.code.copy
   - content.tooltips
   - navigation.footer
-  - navigation.indexes
+  - navigation.instant.preview
+  - navigation.path
   - navigation.sections
   - navigation.tabs
   - navigation.tabs.sticky
@@ -74,6 +74,9 @@ extra_css:
 - css/material.css
 - css/mkdocstrings.css
 
+extra_javascript:
+- js/feedback.js
+
 markdown_extensions:
 - attr_list
 - admonition
@@ -100,16 +103,17 @@ markdown_extensions:
 plugins:
 - search
 - markdown-exec
+- section-index
 - gen-files:
     scripts:
-    - scripts/gen_ref_nav.py
+    - scripts/gen_api_ref.py
 - literate-nav:
-    nav_file: SUMMARY.md
+    nav_file: SUMMARY.txt
 - coverage
 - mkdocstrings:
     handlers:
       python:
-        import:
+        inventories:
         - https://docs.python.org/3/objects.inv
         paths: [src]
         options:
@@ -124,13 +128,21 @@ plugins:
           show_root_heading: true
           show_root_full_path: false
           show_signature_annotations: true
+          show_source: true
           show_symbol_type_heading: true
           show_symbol_type_toc: true
           signature_crossrefs: true
           summary: true
-- git-committers:
+- llmstxt:
+    files:
+    - output: llms.txt
+      inputs:
+      - index.md
+      - reference/**.md
+- git-revision-date-localized:
     enabled: !ENV [DEPLOY, false]
-    repository: pawamoy/yore
+    enable_creation_date: true
+    type: timeago
 - minify:
     minify_html: !ENV [DEPLOY, false]
 - group:
@@ -150,3 +162,15 @@ extra:
     link: https://gitter.im/yore/community
   - icon: fontawesome/brands/python
     link: https://pypi.org/project/yore/
+  analytics:
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: Let us know how we can improve this page.

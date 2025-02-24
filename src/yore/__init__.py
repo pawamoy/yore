@@ -5,4 +5,6 @@ Manage legacy code with comments.
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from yore._internal.cli import get_parser, main
+
+__all__: list[str] = ["get_parser", "main"]
