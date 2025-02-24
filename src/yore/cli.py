@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict, dataclass, field
+import sys
+from dataclasses import dataclass, field
 from datetime import timedelta
 from functools import wraps
 from inspect import cleandoc
@@ -26,12 +27,17 @@ from typing import Any, Callable
 import cappa
 from typing_extensions import Doc
 
-from yore import debug  # noqa: TCH001
+from yore import debug
 from yore.lib import yield_buffer_comments, yield_path_comments, yield_python_files
 
 NAME = "yore"
 
 logger = logging.getLogger(__name__)
+
+# YORE: EOL 3.9: Remove block.
+dataclass_opts: dict[str, bool] = {}
+if sys.version_info >= (3, 10):
+    dataclass_opts["kw_only"] = True
 
 
 def print_and_exit(
@@ -54,27 +60,6 @@ def _parse_timedelta(value: str) -> timedelta:
     return timedelta(days=int(number) * multiplier)
 
 
-@dataclass(kw_only=True)
-class HelpOption:
-    """Reusable class to share a `-h`, `--help` option."""
-
-    help: An[
-        bool,
-        cappa.Arg(
-            short="-h",
-            long=True,
-            action=cappa.ArgAction.help,
-        ),
-        Doc("Print the program help and exit."),
-    ] = False
-
-    @property
-    def _options(self) -> dict[str, Any]:
-        options = asdict(self)
-        options.pop("help", None)
-        return options
-
-
 @cappa.command(
     name="check",
     help="Check Yore comments.",
@@ -85,8 +70,9 @@ class HelpOption:
         """,
     ),
 )
-@dataclass(kw_only=True)
-class CommandCheck(HelpOption):
+# YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+@dataclass(**dataclass_opts)
+class CommandCheck:
     """Command to check Yore comments."""
 
     paths: An[
@@ -144,8 +130,9 @@ class CommandCheck(HelpOption):
         """,
     ),
 )
-@dataclass(kw_only=True)
-class CommandFix(HelpOption):
+# YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+@dataclass(**dataclass_opts)
+class CommandFix:
     """Command to fix Yore comments."""
 
     paths: An[
@@ -264,8 +251,9 @@ class CommandFix(HelpOption):
         """,
     ),
 )
-@dataclass(kw_only=True)
-class CommandMain(HelpOption):
+# YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+@dataclass(**dataclass_opts)
+class CommandMain:
     """Command to manage legacy code in your code base with YORE comments."""
 
     subcommand: An[cappa.Subcommands[CommandCheck | CommandFix], Doc("The selected subcommand.")]
@@ -307,4 +295,17 @@ def main(
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     output = cappa.Output(error_format=f"[bold]{NAME}[/]: [bold red]error[/]: {{message}}")
-    return cappa.invoke(CommandMain, argv=args, output=output, backend=cappa.backend, completion=False, help=False)
+    help_option: cappa.Arg = cappa.Arg(
+        short="-h",
+        long=True,
+        action=cappa.ArgAction.help,
+        help="Print the program help and exit.",
+    )
+    return cappa.invoke(
+        CommandMain,
+        argv=args,
+        output=output,
+        backend=cappa.backend,
+        completion=False,
+        help=help_option,
+    )
