@@ -313,6 +313,4 @@ def main(
             help=help_option,
         )
     except cappa.Exit as error:
-        if error.message:
-            print(error.message, file=sys.stderr)
         return int(1 if error.code is None else error.code)
