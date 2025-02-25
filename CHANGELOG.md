@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.3.2](https://github.com/pawamoy/yore/releases/tag/0.3.2) - 2025-02-25
+
+<small>[Compare with 0.3.1](https://github.com/pawamoy/yore/compare/0.3.1...0.3.2)</small>
+
+### Bug Fixes
+
+- Fix `yore` script path ([f877a6b](https://github.com/pawamoy/yore/commit/f877a6bff48746724fb1c27c0d5ace378a62f02e) by Bartosz Sławecki). [PR-10](https://github.com/pawamoy/yore/pull/10)
+
 ## [0.3.1](https://github.com/pawamoy/yore/releases/tag/0.3.1) - 2025-02-24
 
 <small>[Compare with 0.3.0](https://github.com/pawamoy/yore/compare/0.3.0...0.3.1)</small>
