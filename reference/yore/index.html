@@ -350,9 +350,7 @@
 <span class=normal>313</span>
 <span class=normal>314</span>
 <span class=normal>315</span>
-<span class=normal>316</span>
-<span class=normal>317</span>
-<span class=normal>318</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>main</span><span class=p>(</span>
+<span class=normal>316</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>main</span><span class=p>(</span>
     <span class=n>args</span><span class=p>:</span> <span class=n>An</span><span class=p>[</span><span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]</span> <span class=o>|</span> <span class=kc>None</span><span class=p>,</span> <span class=n>Doc</span><span class=p>(</span><span class=s2>&quot;Arguments passed from the command line.&quot;</span><span class=p>)]</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span>
 <span class=p>)</span> <span class=o>-&gt;</span> <span class=n>An</span><span class=p>[</span><span class=nb>int</span><span class=p>,</span> <span class=n>Doc</span><span class=p>(</span><span class=s2>&quot;An exit code.&quot;</span><span class=p>)]:</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Run the main program.</span>
@@ -377,8 +375,6 @@
             <span class=n>help</span><span class=o>=</span><span class=n>help_option</span><span class=p>,</span>
         <span class=p>)</span>
     <span class=k>except</span> <span class=n>cappa</span><span class=o>.</span><span class=n>Exit</span> <span class=k>as</span> <span class=n>error</span><span class=p>:</span>
-        <span class=k>if</span> <span class=n>error</span><span class=o>.</span><span class=n>message</span><span class=p>:</span>
-            <span class=nb>print</span><span class=p>(</span><span class=n>error</span><span class=o>.</span><span class=n>message</span><span class=p>,</span> <span class=n>file</span><span class=o>=</span><span class=n>sys</span><span class=o>.</span><span class=n>stderr</span><span class=p>)</span>
         <span class=k>return</span> <span class=nb>int</span><span class=p>(</span><span class=mi>1</span> <span class=k>if</span> <span class=n>error</span><span class=o>.</span><span class=n>code</span> <span class=ow>is</span> <span class=kc>None</span> <span class=k>else</span> <span class=n>error</span><span class=o>.</span><span class=n>code</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=yore.yield_buffer_comments class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">yield_buffer_comments</span> <a href=#yore.yield_buffer_comments class=headerlink title="Permanent link">¤</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>yield_buffer_comments</span><span class=p>(</span>
     <span class=n><a class="autorefs autorefs-internal" href="#yore.yield_buffer_comments(file)">file</a></span><span class=p>:</span> <span class=n><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></span><span class=p>,</span>
