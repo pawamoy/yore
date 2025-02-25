@@ -46,7 +46,7 @@ Gitter = "https://gitter.im/yore/community"
 Funding = "https://github.com/sponsors/pawamoy"
 
 [project.scripts]
-yore = "yore.cli:main"
+yore = "yore._internal.cli:main"
 
 [tool.pdm.version]
 source = "call"
