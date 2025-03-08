@@ -113,11 +113,12 @@ class CommandCheck:
 
     def __call__(self) -> Any:
         """Check Yore comments."""
+        ok = True
         paths = self.paths or [Path(".")]
         for path in paths:
             for comment in yield_path_comments(path):
-                comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
-        return 0
+                ok &= comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
+        return 0 if ok else 1
 
 
 @cappa.command(
@@ -191,7 +192,6 @@ class CommandFix:
             else:
                 for file in yield_python_files(path):
                     self._fix(file)
-
         return 0
 
 

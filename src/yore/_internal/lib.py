@@ -184,13 +184,16 @@ class YoreComment:
         bump: str | None = None,
         eol_within: TimeDelta | None = None,
         bol_within: TimeDelta | None = None,
-    ) -> None:
+    ) -> bool:
         """Check the comment.
 
         Parameters:
             bump: The next version of the project.
             eol_within: The time delta to start warning before the End of Life of a Python version.
             bol_within: The time delta to start warning before the Beginning of Life of a Python version.
+
+        Returns:
+            True when there is nothing to do, False otherwise.
         """
         msg_location = f"{self.file}:{self.lineno}: "
         if self.is_eol:
@@ -200,6 +203,8 @@ class YoreComment:
                 )
             elif _within(TimeDelta(days=0), self.eol):
                 _logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
+            else:
+                return True
         elif self.is_bol:
             if bol_within and _within(bol_within, self.bol):
                 _logger.warning(
@@ -207,10 +212,15 @@ class YoreComment:
                 )
             elif _within(TimeDelta(days=0), self.bol):
                 _logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
+            else:
+                return True
         elif self.is_bump and bump and Version(bump) >= Version(self.version):
             _logger.error(
                 f"{msg_location}Code is scheduled for update/removal in {self.version} which is older than or equal to {bump}",
             )
+        else:
+            return True
+        return False
 
     def fix(
         self,
