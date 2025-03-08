@@ -242,11 +242,12 @@ Source code in `src/yore/_internal/cli.py`
 ```
 def __call__(self) -> Any:
     """Check Yore comments."""
+    ok = True
     paths = self.paths or [Path(".")]
     for path in paths:
         for comment in yield_path_comments(path):
-            comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
-    return 0
+            ok &= comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
+    return 0 if ok else 1
 
 ```
 
@@ -332,7 +333,6 @@ def __call__(self) -> Any:
         else:
             for file in yield_python_files(path):
                 self._fix(file)
-
     return 0
 
 ```
@@ -624,7 +624,7 @@ check(
     bump: str | None = None,
     eol_within: timedelta | None = None,
     bol_within: timedelta | None = None,
-) -> None
+) -> bool
 
 ```
 
@@ -644,6 +644,10 @@ Parameters:
 
   (`timedelta | None`, default: `None` ) – The time delta to start warning before the Beginning of Life of a Python version.
 
+Returns:
+
+- `bool` – True when there is nothing to do, False otherwise.
+
 Source code in `src/yore/_internal/lib.py`
 
 ```
@@ -653,13 +657,16 @@ def check(
     bump: str | None = None,
     eol_within: TimeDelta | None = None,
     bol_within: TimeDelta | None = None,
-) -> None:
+) -> bool:
     """Check the comment.
 
     Parameters:
         bump: The next version of the project.
         eol_within: The time delta to start warning before the End of Life of a Python version.
         bol_within: The time delta to start warning before the Beginning of Life of a Python version.
+
+    Returns:
+        True when there is nothing to do, False otherwise.
     """
     msg_location = f"{self.file}:{self.lineno}: "
     if self.is_eol:
@@ -669,6 +676,8 @@ def check(
             )
         elif _within(TimeDelta(days=0), self.eol):
             _logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
+        else:
+            return True
     elif self.is_bol:
         if bol_within and _within(bol_within, self.bol):
             _logger.warning(
@@ -676,10 +685,15 @@ def check(
             )
         elif _within(TimeDelta(days=0), self.bol):
             _logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
+        else:
+            return True
     elif self.is_bump and bump and Version(bump) >= Version(self.version):
         _logger.error(
             f"{msg_location}Code is scheduled for update/removal in {self.version} which is older than or equal to {bump}",
         )
+    else:
+        return True
+    return False
 
 ```
 
