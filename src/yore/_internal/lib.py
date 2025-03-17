@@ -99,6 +99,8 @@ def _match_to_comment(match: re.Match, file: Path, lineno: int) -> YoreComment:
         file=file,
         lineno=lineno,
         raw=match.group(0),
+        prefix=match.group("prefix"),
+        suffix=match.group("suffix"),
         kind=match.group("kind"),
         version=match.group("version"),
         remove=match.group("remove"),
@@ -131,6 +133,10 @@ class YoreComment:
     """The line number of the comment."""
     raw: str
     """The raw comment."""
+    prefix: str
+    """The prefix of the comment."""
+    suffix: str
+    """The suffix of the comment."""
     kind: YoreKind
     """The kind of comment."""
     version: str
@@ -179,6 +185,11 @@ class YoreComment:
         """The End of Life date for the Python version."""
         return python_dates[self.version][1]
 
+    @property
+    def comment(self) -> str:
+        """The comment without the prefix."""
+        return self.raw.removeprefix(self.prefix).removesuffix(self.suffix)
+
     def check(
         self,
         *,
@@ -196,29 +207,23 @@ class YoreComment:
         Returns:
             True when there is nothing to do, False otherwise.
         """
-        msg_location = f"{self.file}:{self.lineno}: "
+        msg_location = f"{self.file}:{self.lineno}:"
         if self.is_eol:
             if eol_within and _within(eol_within, self.eol):
-                _logger.warning(
-                    f"{msg_location}Python {self.version} will reach its End of Life within approx. {naturaldelta(_delta(self.eol))}",
-                )
+                _logger.warning(f"{msg_location} in ~{naturaldelta(_delta(self.eol))} {self.comment}")
             elif _within(TimeDelta(days=0), self.eol):
-                _logger.error(f"{msg_location}Python {self.version} has reached its End of Life since {self.eol}")
+                _logger.error(f"{msg_location} since {self.eol} {self.comment}")
             else:
                 return True
         elif self.is_bol:
             if bol_within and _within(bol_within, self.bol):
-                _logger.warning(
-                    f"{msg_location}Python {self.version} will be released within approx. {naturaldelta(_delta(self.bol))}",
-                )
+                _logger.warning(f"{msg_location} in ~{naturaldelta(_delta(self.bol))} {self.comment}")
             elif _within(TimeDelta(days=0), self.bol):
-                _logger.error(f"{msg_location}Python {self.version} is released since {self.bol}")
+                _logger.error(f"{msg_location} since {self.bol} {self.comment}")
             else:
                 return True
         elif self.is_bump and bump and Version(bump) >= Version(self.version):
-            _logger.error(
-                f"{msg_location}Code is scheduled for update/removal in {self.version} which is older than or equal to {bump}",
-            )
+            _logger.error(f"{msg_location} version {self.version} >= {self.comment}")
         else:
             return True
         return False
