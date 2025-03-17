@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import subprocess
 from dataclasses import dataclass
 from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
@@ -295,9 +296,25 @@ class YoreComment:
         return False
 
 
-COMMENT_PATTERN = r"""
-    ^\s*
-    \#\ {prefix}:\ (?P<kind>bump|eol)\ (?P<version>[^:]+):\ (?:
+COMMENT_PREFIXES: set[str] = {
+    r"\#\ ",  # Nim, Perl, PHP, Python, R, Ruby, shell, YAML
+    r"//\ ",  # C, C++, Go, Java, Javascript, Rust, Swift
+    r"--\ ",  # Haskell, Lua, SQL
+    r";",  # Lisp, Scheme
+    r"%\ ",  # MATLAB
+    r"'\ ?",  # VBA
+    r"/\*\ ",  # C, C++, Java, Javascript, CSS
+    r"<!--\ ",  # HTML, Markdown, XML
+    r"\{\#-?\ ",  # Jinja
+    r"\(\*\ ",  # OCaml
+}
+"""The supported comment prefixes."""
+
+_PATTERN_PREFIX = rf"^(?P<prefix>\s*(?:{'|'.join(sorted(COMMENT_PREFIXES))})PREFIX:\ )"
+_PATTERN_SUFFIX = r"(?P<suffix>\.?.*)$"
+
+COMMENT_PATTERN: str = r"""
+    (?P<kind>bump|eol)\ (?P<version>[^:]+):\ (?:
         remove\ (?P<remove>block|file|line)
         |
         replace\ (?P<replace>block|file|line)\ with\ (?:
@@ -309,20 +326,44 @@ COMMENT_PATTERN = r"""
         )
         |
         (?P<regex>regex-)?replace\ `(?P<pattern1>.+)`\ with\ `(?P<pattern2>.*)`\ within\ (?P<within>block|file|line)
-    )\.?.*$
+    )
 """
 """The Yore-comment pattern, as a regular expression."""
 
 
-def yield_python_files(directory: Path, exclude: list[str] | None = None) -> Iterator[Path]:
-    """Yield all Python files in a directory."""
+def get_pattern(prefix: str = DEFAULT_PREFIX) -> str:
+    """Get the Yore-comment pattern with a specific prefix.
+
+    Parameters:
+        prefix: The prefix to use in the pattern.
+
+    Returns:
+        The Yore-comment pattern.
+    """
+    return _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX
+
+
+def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[Path]:
+    """Yield all files in a directory."""
     exclude = DEFAULT_EXCLUDE if exclude is None else exclude
     _logger.debug(f"{directory}: scanning...")
-    for path in directory.iterdir():
-        if path.is_file() and path.suffix == ".py":
-            yield path
-        elif path.is_dir() and not any(path.match(pattern) for pattern in exclude):
-            yield from yield_python_files(path, exclude=exclude)
+    try:
+        git_files = subprocess.run(  # noqa: S603
+            ["git", "ls-files", "-z"],  # noqa: S607
+            capture_output=True,
+            cwd=directory,
+            text=True,
+            check=False,
+        ).stdout
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        for path in directory.iterdir():
+            if path.is_file():
+                yield path
+            elif path.is_dir() and not any(path.match(pattern) for pattern in exclude):
+                yield from yield_files(path, exclude=exclude)
+    else:
+        for filepath in git_files.split("\0"):
+            yield directory / filepath
 
 
 def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
@@ -336,7 +377,7 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
     Yields:
         Yore-comments.
     """
-    regex = re.compile(COMMENT_PATTERN.format(prefix=prefix), re.VERBOSE | re.IGNORECASE)
+    regex = re.compile(get_pattern(prefix=prefix), re.VERBOSE | re.IGNORECASE)
     for lineno, line in enumerate(lines, 1):
         if match := regex.match(line):
             yield _match_to_comment(match, file, lineno)
@@ -354,7 +395,7 @@ def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
     """
     try:
         lines = file.read_text().splitlines()
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return
     yield from yield_buffer_comments(file, lines, prefix=prefix)
 
@@ -369,7 +410,7 @@ def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -
     Yields:
         Yore-comments.
     """
-    for file in yield_python_files(directory):
+    for file in yield_files(directory):
         yield from yield_file_comments(file, prefix=prefix)
 
 

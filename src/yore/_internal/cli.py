@@ -26,7 +26,7 @@ import cappa
 from typing_extensions import Doc
 
 from yore._internal import debug
-from yore._internal.lib import yield_buffer_comments, yield_path_comments, yield_python_files
+from yore._internal.lib import yield_buffer_comments, yield_files, yield_path_comments
 
 _NAME = "yore"
 
@@ -190,7 +190,7 @@ class CommandFix:
             if path.is_file():
                 self._fix(path)
             else:
-                for file in yield_python_files(path):
+                for file in yield_files(path):
                     self._fix(file)
         return 0
 
