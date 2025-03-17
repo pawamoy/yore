@@ -20,7 +20,7 @@ nav:
   - Credits: credits.md
   - License: license.md
 - Usage: usage.md
-- API reference: reference/yore.md
+- API reference: reference/api.md
 - Development:
   - Contributing: contributing.md
   - Code of Conduct: code_of_conduct.md
@@ -101,7 +101,9 @@ markdown_extensions:
 
 plugins:
 - search
+- autorefs
 - markdown-exec
+- section-index
 - coverage
 - mkdocstrings:
     handlers:
@@ -110,6 +112,7 @@ plugins:
         - https://docs.python.org/3/objects.inv
         paths: [src]
         options:
+          backlinks: tree
           docstring_options:
             ignore_init_summary: true
           docstring_section_style: list
@@ -132,7 +135,7 @@ plugins:
           unwrap_annotated: true
 - llmstxt:
     files:
-    - output: llms.txt
+    - output: llms-full.txt
       inputs:
       - index.md
       - reference/**.md

@@ -1,5 +1,5 @@
 ---
-title: Yore API reference
+title: API reference
 hide:
 - navigation
 ---
