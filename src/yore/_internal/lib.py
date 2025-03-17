@@ -469,4 +469,4 @@ class _LazyPythonDates:
 
 
 python_dates = _LazyPythonDates()
-"""A dictionary of Python versions and their End of Life dates."""
+"""A dictionary of Python versions and their Beginning/End of Life dates."""
