@@ -18,7 +18,7 @@ Terms between `<` and `>` *must* be provided, while terms between `[` and `]` ar
 
 Terms `eol`, `bol` and `bump` mean "End of Life", "Beginning of Life" and "version bump", respectively.
 
-Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope. 
+Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
 
 ## Examples
 
@@ -103,7 +103,7 @@ print("goodbye")
 Here we see that the blank line marked the end of the first block. But if the lines following a blank lines are over-indented, they will still count as being part of the block:
 
 ```python
-def function():    
+def function():
     # YORE: This is a block.
     print("hello")
     if some_condition:
@@ -222,30 +222,30 @@ index 5e3e01c6..1671fdc2 100644
 --- a/src/griffe/agents/nodes/_runtime.py
 +++ b/src/griffe/agents/nodes/_runtime.py
 @@ -21,8 +21,7 @@ _cyclic_relationships = {
- 
- 
+
+
  def _same_components(a: str, b: str, /) -> bool:
 -    # YORE: EOL 3.8: Replace `lstrip` with `removeprefix` within line.
 -    return [cpn.lstrip("_") for cpn in a.split(".")] == [cpn.lstrip("_") for cpn in b.split(".")]
 +    return [cpn.removeprefix("_") for cpn in a.split(".")] == [cpn.removeprefix("_") for cpn in b.split(".")]
- 
- 
+
+
  class ObjectNode:
 diff --git a/src/griffe/agents/nodes/_values.py b/src/griffe/agents/nodes/_values.py
 index 59bfacac..2f6eaa88 100644
 --- a/src/griffe/agents/nodes/_values.py
 +++ b/src/griffe/agents/nodes/_values.py
 @@ -8,11 +8,7 @@ from typing import TYPE_CHECKING
- 
+
  from griffe.logger import get_logger
- 
+
 -# YORE: EOL 3.8: Replace block with line 4.
 -if sys.version_info < (3, 9):
 -    from astunparse import unparse
 -else:
 -    from ast import unparse
 +from ast import unparse
- 
+
  if TYPE_CHECKING:
      from pathlib import Path
 diff --git a/src/griffe/dataclasses.py b/src/griffe/dataclasses.py
@@ -259,18 +259,18 @@ index 22ddf24e..cfdc7926 100644
 -        # YORE: Bump 1.0.0: Remove block.
 -        if docstring_parser is not None:
 -            warnings.warn("Parameter `docstring_parser` is deprecated and has no effect.", stacklevel=1)
- 
+
          base: dict[str, Any] = {
              "value": self.value,
 @@ -527,8 +524,7 @@ class Object(ObjectAliasMixin):
          """Whether this object is a namespace subpackage."""
          return False
- 
+
 -    # YORE: Bump 1.0.0: Replace ` | set[str]` with `` within line.
 -    def has_labels(self, *labels: str | set[str]) -> bool:
 +    def has_labels(self, *labels: str) -> bool:
          """Tell if this object has all the given labels.
- 
+
          Parameters:
 @@ -537,21 +533,8 @@ class Object(ObjectAliasMixin):
          Returns:
@@ -288,11 +288,11 @@ index 22ddf24e..cfdc7926 100644
 -                    stacklevel=2,
 -                )
 -                all_labels.update(label)
- 
+
 -        # YORE: Bump 1.0.0: Replace `all_labels` with `set(labels)` within line.
 -        return all_labels.issubset(self.labels)
 +        return set(labels).issubset(self.labels)
- 
+
      def filter_members(self, *predicates: Callable[[Object | Alias], bool]) -> dict[str, Object | Alias]:
          """Filter and return members based on predicates.
 diff --git a/src/griffe/encoders.py b/src/griffe/encoders.py
@@ -302,7 +302,7 @@ index e99fc1d4..3deea7db 100644
 @@ -88,13 +88,6 @@ class JSONEncoder(json.JSONEncoder):
          super().__init__(*args, **kwargs)
          self.full: bool = full
- 
+
 -        # YORE: Bump 1.0.0: Remove block.
 -        self.docstring_parser: Parser | None = docstring_parser
 -        self.docstring_options: dict[str, Any] = docstring_options or {}
@@ -310,7 +310,7 @@ index e99fc1d4..3deea7db 100644
 -            warnings.warn("Parameter `docstring_parser` is deprecated and has no effect.", stacklevel=1)
 -        if docstring_options is not None:
 -            warnings.warn("Parameter `docstring_options` is deprecated and has no effect.", stacklevel=1)
- 
+
      def default(self, obj: Any) -> Any:
          """Return a serializable representation of the given object.
 diff --git a/src/griffe/expressions.py b/src/griffe/expressions.py
@@ -320,7 +320,7 @@ index c03d0a96..d9d6ebfd 100644
 @@ -1166,17 +1166,6 @@ _node_map: dict[type, Callable[[Any, Module | Class], Expr]] = {
      ast.YieldFrom: _build_yield_from,
  }
- 
+
 -# YORE: EOL 3.8: Remove block.
 -if sys.version_info < (3, 9):
 -
@@ -332,27 +332,27 @@ index c03d0a96..d9d6ebfd 100644
 -
 -    _node_map[ast.ExtSlice] = _build_extslice
 -    _node_map[ast.Index] = _build_index
- 
- 
+
+
  def _build(node: ast.AST, parent: Module | Class, **kwargs: Any) -> Expr:
 diff --git a/src/griffe/extensions/base.py b/src/griffe/extensions/base.py
 index c6b1cf79..e3fc801e 100644
 --- a/src/griffe/extensions/base.py
 +++ b/src/griffe/extensions/base.py
 @@ -461,8 +461,7 @@ LoadableExtension = Union[str, Dict[str, Any], ExtensionType, Type[ExtensionType
- 
- 
+
+
  def load_extensions(
 -    # YORE: Bump 1.0.0: Replace ` | Sequence[LoadableExtension],` with `` within line.
 -    *exts: LoadableExtension | Sequence[LoadableExtension],
 +    *exts: LoadableExtension
  ) -> Extensions:
      """Load configured extensions.
- 
+
 @@ -474,22 +473,8 @@ def load_extensions(
      """
      extensions = Extensions()
- 
+
 -    # YORE: Bump 1.0.0: Remove block.
 -    all_exts: list[LoadableExtension] = []
 -    for ext in exts:
@@ -366,7 +366,7 @@ index c6b1cf79..e3fc801e 100644
 -            all_exts.extend(ext)
 -        else:
 -            all_exts.append(ext)  # type: ignore[arg-type]
- 
+
 -    # YORE: Bump 1.0.0: Replace `all_exts` with `exts` within line.
 -    for extension in all_exts:
 +    for extension in exts:
@@ -379,8 +379,8 @@ index d91fcb7f..77bd09c5 100644
 +++ b/src/griffe/git.py
 @@ -16,19 +16,6 @@ from griffe.exceptions import GitError
  WORKTREE_PREFIX = "griffe-worktree-"
- 
- 
+
+
 -# YORE: Bump 1.0.0: Remove block.
 -def __getattr__(name: str) -> Any:
 -    if name == "load_git":
@@ -394,8 +394,8 @@ index d91fcb7f..77bd09c5 100644
 -
 -        return load_git
 -    raise AttributeError
- 
- 
+
+
  def assert_git_repo(path: str | Path) -> None:
 diff --git a/src/griffe/loader.py b/src/griffe/loader.py
 index 52cd5523..c908ee0b 100644
@@ -404,7 +404,7 @@ index 52cd5523..c908ee0b 100644
 @@ -94,30 +94,6 @@ class GriffeLoader:
              "time_spent_inspecting": 0,
          }
- 
+
 -    # YORE: Bump 1.0.0: Remove block.
 -    def load_module(
 -        self,
@@ -429,7 +429,7 @@ index 52cd5523..c908ee0b 100644
 -            try_relative_path=try_relative_path,
 -            find_stubs_package=find_stubs_package,
 -        )
- 
+
      def load(
          self,
 @@ -127,8 +103,6 @@ class GriffeLoader:
@@ -440,7 +440,7 @@ index 52cd5523..c908ee0b 100644
 -        module: str | Path | None = None,
      ) -> Object | Alias:
          """Load an object as a Griffe object, given its Python or file path.
- 
+
 @@ -160,16 +134,6 @@ class GriffeLoader:
          Returns:
              A Griffe object.
@@ -455,7 +455,7 @@ index 52cd5523..c908ee0b 100644
 -                DeprecationWarning,
 -                stacklevel=2,
 -            )
- 
+
          obj_path: str
          package = None
 @@ -739,8 +703,6 @@ def load(
@@ -488,11 +488,11 @@ index 52cd5523..c908ee0b 100644
 @@ -885,9 +843,6 @@ def load_git(
          if isinstance(objspec, Path):
              objspec = worktree / objspec
- 
+
 -        # YORE: Bump 1.0.0: Remove block.
 -        if isinstance(module, Path):
 -            module = worktree / module
- 
+
          return load(
              objspec,
 @@ -902,8 +857,6 @@ def load_git(
@@ -515,14 +515,14 @@ index 91006b5d..c030dabc 100644
 -            # YORE: Bump 1.0.0: Replace line with `return self.public`.
 -            return _True if self.public else _False  # type: ignore[return-value,attr-defined]
 +            return self.public
- 
+
          # If the object is defined at the module-level and is listed in `__all__`, it is public.
          # If the parent module defines `__all__` but does not list the object, it is private.
          if self.parent and self.parent.is_module and bool(self.parent.exports):  # type: ignore[attr-defined]
 -            # YORE: Bump 1.0.0: Replace line with `return self.name in self.parent.exports`.
 -            return _True if self.name in self.parent.exports else _False  # type: ignore[attr-defined,return-value]
 +            return self.name in self.parent.exports
- 
+
          # Special objects are always considered public.
          # Even if we don't access them directly, they are used through different *public* means
          # like instantiating classes (`__init__`), using operators (`__eq__`), etc..
@@ -530,7 +530,7 @@ index 91006b5d..c030dabc 100644
 -            # YORE: Bump 1.0.0: Replace line with `return False`.
 -            return _False  # type: ignore[return-value]
 +            return False
- 
+
          # TODO: In a future version, we will support two conventions regarding imports:
          # - `from a import x as x` marks `x` as public.
          # - `from a import *` marks all wildcard imported objects as public.
@@ -539,12 +539,12 @@ index 91006b5d..c030dabc 100644
 -            # YORE: Bump 1.0.0: Replace line with `return False`.
 -            return _False  # type: ignore[return-value]
 +            return False
- 
+
          # If we reached this point, the object is public.
 -        # YORE: Bump 1.0.0: Replace line with `return True`.
 -        return _True  # type: ignore[return-value]
 +        return True
- 
+
      @property
      def is_deprecated(self) -> bool:
 diff --git a/src/griffe/tests.py b/src/griffe/tests.py
@@ -561,7 +561,7 @@ index 75d07975..e0b2effc 100644
 -        except AttributeError:
 -            filepath = modules[-1].filepath.with_name(f"{parts[-1]}.py")  # type: ignore[union-attr]
 +        filepath = modules[-1].filepath.with_stem(parts[-1])  # type: ignore[union-attr]
- 
+
          modules[-1]._filepath = filepath
      return vtree(*modules, return_leaf=return_leaf)  # type: ignore[return-value]
 ```

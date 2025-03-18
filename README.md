@@ -15,7 +15,7 @@ With time, the code base of your project evolves. You add features, you fix bugs
 
 Sometimes, you don't change anything in an incompatible way, but you want to support multiple versions of Python which provide different, incompatible APIs, or for which libraries you depend on provide different, incompatible APIs. In that case, you have to write multiple code branches to support the different Python versions. The code branches for versions of Python older than the latest one are what we call legacy code. Ideally you'd want to only use the API and features of the latest Python version, but your users are sometimes stuck with older versions, and you want to follow the official Python release cycle, which promises support for a certain amount of time after initial release for each minor version (3.11, 3.12, etc.). At the time of writing (2024, see [Python release cycle](https://devguide.python.org/versions/) for up-to-date information), each minor version is supported for approximately 5 years. There's a new minor version each year, so if you follow the release cycle, you maintain support for a window of 5 minor Python versions at any time. Sometimes you will have to support much older versions...
 
-For these use-cases, Yore comes to the rescue. 
+For these use-cases, Yore comes to the rescue.
 
 Yore was born from the will of automating comments I had added along the evolution of my projects. I was usually writing comments such as `TODO: Remove once support for Python 3.8 is dropped`, or `TODO: Remove when we are ready for v1`. One day I decided to make these comments more formal, so I designed a very simple syntax and wrote a tool that would parse them and act on them.
 
@@ -23,7 +23,7 @@ Yore can therefore find comments in your code base, to warn you about upcoming e
 
 ## Quick usage
 
-Write Yore-comments:
+Write Yore comments:
 
 ```python
 # YORE: EOL 3.8: Replace block with line 4.
@@ -53,16 +53,16 @@ index 59bfacac..2f6eaa88 100644
 --- a/src/griffe/agents/nodes/_values.py
 +++ b/src/griffe/agents/nodes/_values.py
 @@ -8,11 +8,7 @@ from typing import TYPE_CHECKING
- 
+
  from griffe.logger import get_logger
- 
+
 -# YORE: EOL 3.8: Replace block with line 4.
 -if sys.version_info < (3, 9):
 -    from astunparse import unparse
 -else:
 -    from ast import unparse
 +from ast import unparse
- 
+
  if TYPE_CHECKING:
      from pathlib import Path
 ```
