@@ -208,17 +208,19 @@ class CommandFix:
         The syntax is as follows:
 
         ```python
-        # YORE: <eol|bump> <VERSION>: Remove <block|line>.
-        # YORE: <eol|bump> <VERSION>: replace <block|line> with line <LINENO>.
-        # YORE: <eol|bump> <VERSION>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-        # YORE: <eol|bump> <VERSION>: replace <block|line> with `<STRING>`.
-        # YORE: <eol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
+        # <PREFIX>: <eol|bump> <VERSION>: Remove <block|line>.
+        # <PREFIX>: <eol|bump> <VERSION>: replace <block|line> with line <LINENO>.
+        # <PREFIX>: <eol|bump> <VERSION>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+        # <PREFIX>: <eol|bump> <VERSION>: replace <block|line> with `<STRING>`.
+        # <PREFIX>: <eol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
         Uppercase terms are placeholders that you should replace with actual values,
         while lowercase terms are keywords that you should use literally.
         Everything except placeholders is case-insensitive.
+
+        The default **prefix** is `YORE`. For now it is only configurable through the Python API.
 
         Examples:
 
