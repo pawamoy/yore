@@ -22,13 +22,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 YoreKind = Literal["bump", "eol", "bol"]
-"""The supported kinds of Yore-comments."""
+"""The supported kinds of Yore comments."""
 
 Scope = Literal["block", "file", "line"]
 """The scope of a comment."""
 
 DEFAULT_PREFIX = "YORE"
-"""The default prefix for Yore-comments."""
+"""The default prefix for Yore comments."""
 
 DEFAULT_EXCLUDE = [".*", "__py*", "build", "dist"]
 """The default patterns to exclude when scanning directories."""
@@ -126,7 +126,7 @@ def _delta(until: Date) -> TimeDelta:
 
 @dataclass
 class YoreComment:
-    """A Yore-comment."""
+    """A Yore comment."""
 
     file: Path
     """The file containing comment."""
@@ -334,18 +334,18 @@ COMMENT_PATTERN: str = r"""
         (?P<regex>regex-)?replace\ `(?P<pattern1>.+)`\ with\ `(?P<pattern2>.*)`\ within\ (?P<within>block|file|line)
     )
 """
-"""The Yore-comment pattern, as a regular expression."""
+"""The Yore comment pattern, as a regular expression."""
 
 
 @cache
 def get_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
-    """Get the Yore-comment pattern with a specific prefix.
+    """Get the Yore comment pattern with a specific prefix.
 
     Parameters:
         prefix: The prefix to use in the pattern.
 
     Returns:
-        The Yore-comment pattern.
+        The Yore comment pattern.
     """
     return re.compile(
         _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX, re.VERBOSE | re.IGNORECASE
@@ -381,7 +381,7 @@ def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[P
 
 
 def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
-    """Yield all Yore-comments in a buffer.
+    """Yield all Yore comments in a buffer.
 
     Parameters:
         file: The file to check.
@@ -389,7 +389,7 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
         prefix: The prefix to look for in the comments.
 
     Yields:
-        Yore-comments.
+        Yore comments.
     """
     prepattern = _get_prematching_pattern(prefix)
     pattern = get_pattern(prefix)
@@ -402,14 +402,14 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
 
 
 def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
-    """Yield all Yore-comments in a file.
+    """Yield all Yore comments in a file.
 
     Parameters:
         file: The file to check.
         prefix: The prefix to look for in the comments.
 
     Yields:
-        Yore-comments.
+        Yore comments.
     """
     try:
         lines = file.read_text().splitlines()
@@ -419,28 +419,28 @@ def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
 
 
 def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
-    """Yield all Yore-comments in a directory.
+    """Yield all Yore comments in a directory.
 
     Parameters:
         directory: The directory to check.
         prefix: The prefix to look for in the comments.
 
     Yields:
-        Yore-comments.
+        Yore comments.
     """
     for file in yield_files(directory):
         yield from yield_file_comments(file, prefix=prefix)
 
 
 def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
-    """Yield all Yore-comments in a file or directory.
+    """Yield all Yore comments in a file or directory.
 
     Parameters:
         path: The file or directory to check.
         prefix: The prefix to look for in the comments.
 
     Yields:
-        Yore-comments.
+        Yore comments.
     """
     if path.is_dir():
         yield from yield_directory_comments(path, prefix=prefix)

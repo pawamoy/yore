@@ -157,7 +157,7 @@ if something_else:  # Indent = 0, not part of the block above.
 
 ### `yore check`
 
-Once you have written a few Yore-comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL (End of Life) date of a Python version, use the `-E`, `--eol-within` option. If you want to be warned before the BOL (Beginning of Life) date of a Python version, use the `-B`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
+Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL (End of Life) date of a Python version, use the `-E`, `--eol-within` option. If you want to be warned before the BOL (Beginning of Life) date of a Python version, use the `-B`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
 
 ```console
 % yore check --warn-before-eol '5 months' --bump 1.0
