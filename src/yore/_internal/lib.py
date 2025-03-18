@@ -9,6 +9,7 @@ from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
 from datetime import timedelta as TimeDelta  # noqa: N812
 from datetime import timezone as TimeZone  # noqa: N812
+from functools import cache
 from re import Pattern
 from typing import TYPE_CHECKING, ClassVar, Literal
 from urllib.request import urlopen
@@ -336,7 +337,8 @@ COMMENT_PATTERN: str = r"""
 """The Yore-comment pattern, as a regular expression."""
 
 
-def get_pattern(prefix: str = DEFAULT_PREFIX) -> str:
+@cache
+def get_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
     """Get the Yore-comment pattern with a specific prefix.
 
     Parameters:
@@ -345,7 +347,14 @@ def get_pattern(prefix: str = DEFAULT_PREFIX) -> str:
     Returns:
         The Yore-comment pattern.
     """
-    return _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX
+    return re.compile(
+        _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX, re.VERBOSE | re.IGNORECASE
+    )
+
+
+@cache
+def _get_prematching_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
+    return re.compile(_PATTERN_PREFIX.replace("PREFIX", prefix), re.VERBOSE | re.IGNORECASE)
 
 
 def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[Path]:
@@ -382,10 +391,14 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
     Yields:
         Yore-comments.
     """
-    regex = re.compile(get_pattern(prefix=prefix), re.VERBOSE | re.IGNORECASE)
+    prepattern = _get_prematching_pattern(prefix)
+    pattern = get_pattern(prefix)
     for lineno, line in enumerate(lines, 1):
-        if match := regex.match(line):
-            yield _match_to_comment(match, file, lineno)
+        if prepattern.match(line):
+            if match := pattern.match(line):
+                yield _match_to_comment(match, file, lineno)
+            else:
+                _logger.error(f"{file}:{lineno}: invalid Yore comment")
 
 
 def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
