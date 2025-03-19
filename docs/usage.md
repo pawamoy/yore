@@ -210,39 +210,25 @@ prefix = "DUE"
 
 ### `yore check`
 
-Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL (End of Life) date of a Python version, use the `-E`, `--eol-within` option. If you want to be warned before the BOL (Beginning of Life) date of a Python version, use the `-B`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
+Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL (End of Life) date of a Python version, use the `-E`, `---eol`,`--eol-within` option. If you want to be warned before the BOL (Beginning of Life) date of a Python version, use the `-B`, `--bol`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
 
 ```console
-% yore check --warn-before-eol '5 months' --bump 1.0
-./src/griffe/encoders.py:91: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/dataclasses.py:155: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/dataclasses.py:530: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/dataclasses.py:540: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/dataclasses.py:553: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/mixins.py:412: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/mixins.py:418: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/mixins.py:425: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/mixins.py:433: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/mixins.py:437: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/tests.py:320: Python 3.8 will reach its End of Life within approx. 4 months
-./src/griffe/expressions.py:1169: Python 3.8 will reach its End of Life within approx. 4 months
-./src/griffe/agents/nodes/_runtime.py:24: Python 3.8 will reach its End of Life within approx. 4 months
-./src/griffe/agents/nodes/_values.py:11: Python 3.8 will reach its End of Life within approx. 4 months
-./src/griffe/git.py:19: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/extensions/base.py:464: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/extensions/base.py:477: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/extensions/base.py:491: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:97: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:130: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:163: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:742: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:811: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:835: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:888: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
-./src/griffe/loader.py:905: Code is scheduled for update/removal in 1.0.0 which is older than or equal to 1
+% yore check --eol '8 months' --bump 2.0
+src/_griffe/agents/inspector.py:704: in ~7 months EOL 3.9: Replace block with lines 2-3
+src/_griffe/agents/nodes/exports.py:19: version 2.0 >= Bump 2: Remove block
+src/_griffe/encoders.py:186: version 2.0 >= Bump 2: Replace line with `members = obj_dict.get("members", {}).values()`
+src/_griffe/encoders.py:188: version 2.0 >= Bump 2: Remove block
+src/_griffe/encoders.py:209: version 2.0 >= Bump 2: Replace line with `members = obj_dict.get("members", {}).values()`
+src/_griffe/encoders.py:211: version 2.0 >= Bump 2: Remove block
+src/_griffe/expressions.py:78: in ~7 months EOL 3.9: Remove block
+src/_griffe/expressions.py:178: in ~7 months EOL 3.9: Replace `**_dataclass_opts` with `slots=True` within line
+src/_griffe/expressions.py:222: in ~7 months EOL 3.9: Replace `**_dataclass_opts` with `slots=True` within line
+src/_griffe/expressions.py:854: in ~7 months EOL 3.9: Replace `**_dataclass_opts` with `slots=True` within line
+src/griffe/__init__.py:180: version 2 >= Bump 2.0: Replace `ExportedName, ` with `` within line
+src/griffe/__init__.py:432: version 2 >= Bump 2.0: Remove line
 ```
 
-By default Yore will search and scan Python modules in the current working directory (excluding cache folders, virtualenvs, etc.), but you can specify multiple paths on the command line:
+By default Yore will run `git ls-files` in the specified path (or current working directory) to know which files to scan. If the command fails, it will scan files recursively, excluding cache folders, virtualenvs, etc.. You can specify multiple paths on the command line:
 
 ```bash
 yore check src scripts/this_module.py docs/*.py
