@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
@@ -124,7 +125,14 @@ def _delta(until: Date) -> TimeDelta:
     return until - DateTime.now(tz=TimeZone.utc).date()
 
 
-@dataclass
+# DUE: EOL 3.9: Remove block.
+_dataclass_opts: dict[str, bool] = {}
+if sys.version_info >= (3, 10):
+    _dataclass_opts["kw_only"] = True
+
+
+# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+@dataclass(**_dataclass_opts)
 class YoreComment:
     """A Yore comment."""
 
