@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for tests/test_api.py: 91.87%</title>
+    <title>Coverage for tests/test_api.py: 92.68%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_58284776.png">
     <link rel="stylesheet" href="style_cb_8e611ae1.css" type="text/css">
     <script src="coverage_html_cb_6fb7b396.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>tests/test_api.py</b>:
-            <span class="pc_cov">91.87%</span>
+            <span class="pc_cov">92.68%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -56,8 +56,8 @@
         </aside>
         <h2>
             <span class="text">93 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">87<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">6<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">88<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">5<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">2<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">4<span class="text"> partial</span></button>
         </h2>
@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="covindex.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_a44f0ac069e85531_test_cli_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.6.12">coverage.py v7.6.12</a>,
-            created at 2025-02-24 16:50 +0100
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.7.0">coverage.py v7.7.0</a>,
+            created at 2025-03-19 16:19 +0100
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -92,7 +92,7 @@
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="key">import</span> <span class="nam">griffe</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="key">import</span> <span class="nam">pytest</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="key">from</span> <span class="nam">mkdocstrings</span><span class="op">.</span><span class="nam">inventory</span> <span class="key">import</span> <span class="nam">Inventory</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="key">from</span> <span class="nam">mkdocstrings</span> <span class="key">import</span> <span class="nam">Inventory</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="key">import</span> <span class="nam">yore</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -201,7 +201,7 @@
     <p class="pln"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">    <span class="str">"""All objects have a single public location."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="key">def</span> <span class="nam">_public_path</span><span class="op">(</span><span class="nam">obj</span><span class="op">:</span> <span class="nam">griffe</span><span class="op">.</span><span class="nam">Object</span> <span class="op">|</span> <span class="nam">griffe</span><span class="op">.</span><span class="nam">Alias</span><span class="op">)</span> <span class="op">-></span> <span class="nam">bool</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="key">return</span> <span class="nam">obj</span><span class="op">.</span><span class="nam">is_public</span> <span class="key">and</span> <span class="op">(</span><span class="nam">obj</span><span class="op">.</span><span class="nam">parent</span> <span class="key">is</span> <span class="key">None</span> <span class="key">or</span> <span class="nam">_public_path</span><span class="op">(</span><span class="nam">obj</span><span class="op">.</span><span class="nam">parent</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="key">return</span> <span class="nam">obj</span><span class="op">.</span><span class="nam">is_public</span> <span class="key">and</span> <span class="op">(</span><span class="nam">obj</span><span class="op">.</span><span class="nam">parent</span> <span class="key">is</span> <span class="key">None</span> <span class="key">or</span> <span class="nam">_public_path</span><span class="op">(</span><span class="nam">obj</span><span class="op">.</span><span class="nam">parent</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="nam">multiple_locations</span> <span class="op">=</span> <span class="op">{</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="key">for</span> <span class="nam">obj_name</span> <span class="key">in</span> <span class="nam">yore</span><span class="op">.</span><span class="nam">__all__</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -217,7 +217,7 @@
     <p class="pln"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t"><span class="key">def</span> <span class="nam">test_api_matches_inventory</span><span class="op">(</span><span class="nam">inventory</span><span class="op">:</span> <span class="nam">Inventory</span><span class="op">,</span> <span class="nam">public_objects</span><span class="op">:</span> <span class="nam">list</span><span class="op">[</span><span class="nam">griffe</span><span class="op">.</span><span class="nam">Object</span> <span class="op">|</span> <span class="nam">griffe</span><span class="op">.</span><span class="nam">Alias</span><span class="op">]</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">    <span class="str">"""All public objects are added to the inventory."""</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="nam">ignore_names</span> <span class="op">=</span> <span class="op">{</span><span class="str">"__getattr__"</span><span class="op">,</span> <span class="str">"__init__"</span><span class="op">,</span> <span class="str">"__repr__"</span><span class="op">,</span> <span class="str">"__str__"</span><span class="op">,</span> <span class="str">"__post_init__"</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="nam">ignore_names</span> <span class="op">=</span> <span class="op">{</span><span class="str">"__bool__"</span><span class="op">,</span> <span class="str">"__getattr__"</span><span class="op">,</span> <span class="str">"__init__"</span><span class="op">,</span> <span class="str">"__post_init__"</span><span class="op">,</span> <span class="str">"__repr__"</span><span class="op">,</span> <span class="str">"__str__"</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="nam">not_in_inventory</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">        <span class="nam">obj</span><span class="op">.</span><span class="nam">path</span> <span class="key">for</span> <span class="nam">obj</span> <span class="key">in</span> <span class="nam">public_objects</span> <span class="key">if</span> <span class="nam">obj</span><span class="op">.</span><span class="nam">name</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">ignore_names</span> <span class="key">and</span> <span class="nam">obj</span><span class="op">.</span><span class="nam">path</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">inventory</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="op">]</span>&nbsp;</span><span class="r"></span></p>
@@ -235,7 +235,7 @@
     <p class="run"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="nam">public_api_paths</span> <span class="op">=</span> <span class="op">{</span><span class="nam">obj</span><span class="op">.</span><span class="nam">path</span> <span class="key">for</span> <span class="nam">obj</span> <span class="key">in</span> <span class="nam">public_objects</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">    <span class="nam">public_api_paths</span><span class="op">.</span><span class="nam">add</span><span class="op">(</span><span class="str">"yore"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="key">for</span> <span class="nam">item</span> <span class="key">in</span> <span class="nam">inventory</span><span class="op">.</span><span class="nam">values</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">        <span class="key">if</span> <span class="nam">item</span><span class="op">.</span><span class="nam">domain</span> <span class="op">==</span> <span class="str">"py"</span> <span class="key">and</span> <span class="str">"("</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">item</span><span class="op">.</span><span class="nam">name</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">        <span class="key">if</span> <span class="nam">item</span><span class="op">.</span><span class="nam">domain</span> <span class="op">==</span> <span class="str">"py"</span> <span class="key">and</span> <span class="str">"("</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">item</span><span class="op">.</span><span class="nam">name</span> <span class="key">and</span> <span class="op">(</span><span class="nam">item</span><span class="op">.</span><span class="nam">name</span> <span class="op">==</span> <span class="str">"yore"</span> <span class="key">or</span> <span class="nam">item</span><span class="op">.</span><span class="nam">name</span><span class="op">.</span><span class="nam">startswith</span><span class="op">(</span><span class="str">"yore."</span><span class="op">)</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">            <span class="nam">obj</span> <span class="op">=</span> <span class="nam">loader</span><span class="op">.</span><span class="nam">modules_collection</span><span class="op">[</span><span class="nam">item</span><span class="op">.</span><span class="nam">name</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="par run show_par"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">            <span class="key">if</span> <span class="nam">obj</span><span class="op">.</span><span class="nam">path</span> <span class="key">not</span> <span class="key">in</span> <span class="nam">public_api_paths</span> <span class="key">and</span> <span class="key">not</span> <span class="nam">any</span><span class="op">(</span><span class="nam">path</span> <span class="key">in</span> <span class="nam">public_api_paths</span> <span class="key">for</span> <span class="nam">path</span> <span class="key">in</span> <span class="nam">obj</span><span class="op">.</span><span class="nam">aliases</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">156&#x202F;&#x219B;&#x202F;157</span><span class="annotate long">line 156 didn't jump to line 157 because the condition on line 156 was never true</span></span></p>
     <p class="mis show_mis"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">                <span class="nam">not_in_api</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">item</span><span class="op">.</span><span class="nam">name</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -265,8 +265,8 @@
             <a class="nav" href="covindex.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_a44f0ac069e85531_test_cli_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.6.12">coverage.py v7.6.12</a>,
-            created at 2025-02-24 16:50 +0100
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.7.0">coverage.py v7.7.0</a>,
+            created at 2025-03-19 16:19 +0100
         </p>
     </div>
 </footer>
