@@ -6,17 +6,31 @@ Yore lets you write `# YORE` comments in your code base to mark some lines of bl
 
 The syntax is as follows:
 
-```python
-# <PREFIX>: <eol|bol|bump> <VERSION>: remove <file|block|line>.
-# <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with line <LINENO>.
-# <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-# <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with `<STRING>`.
-# <PREFIX>: <eol|bol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
+```text
+<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: remove <file|block|line>.
+<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with line <LINENO>.
+<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with `<STRING>`.
+<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
 ```
 
 Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional. Uppercase terms are placeholders that you should replace with actual values, while lowercase terms are keywords that you should use literally. Everything except placeholders is case-insensitive.
 
-The default **prefix** is `YORE`. For now it is only configurable through the Python API.
+`COMMENT` is comment syntax, depending on the source file. Yore supports the following syntax:
+
+- `#`: Nim, Perl, PHP, Python, R, Ruby, shell, YAML
+- `//`: C, C++, Go, Java, Javascript, Rust, Swift
+- `--`: Haskell, Lua, SQL
+- `;"`: Lisp, Scheme
+- `%`: MATLAB
+- `'`: VBA
+- `/*`: C, C++, Java, Javascript, CSS
+- `<!--`: HTML, Markdown, XML
+- `{#`:  Jinja
+- `(*`: OCaml
+
+Trailing comments are not supported: comments must be preceded with spaces only. Yore comments are always written on a single line.
+
 
 Terms `eol`, `bol` and `bump` mean "End of Life", "Beginning of Life" and "version bump", respectively.
 
