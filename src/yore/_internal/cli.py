@@ -220,7 +220,10 @@ class CommandDiff:
     ] = DEFAULT_PREFIX
 
     def _diff(self, file: Path) -> Iterator[str]:
-        old_lines = file.read_text().splitlines(keepends=True)
+        try:
+            old_lines = file.read_text().splitlines(keepends=True)
+        except (OSError, UnicodeDecodeError):
+            return
         new_lines = old_lines.copy()
         for comment in sorted(
             yield_buffer_comments(file, new_lines, prefix=self.prefix),
@@ -318,7 +321,10 @@ class CommandFix:
     ] = DEFAULT_PREFIX
 
     def _fix(self, file: Path) -> None:
-        lines = file.read_text().splitlines(keepends=True)
+        try:
+            lines = file.read_text().splitlines(keepends=True)
+        except (OSError, UnicodeDecodeError):
+            return
         count = 0
         for comment in sorted(
             yield_buffer_comments(file, lines, prefix=self.prefix),
