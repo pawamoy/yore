@@ -5,7 +5,7 @@
 [![pypi version](https://img.shields.io/pypi/v/yore.svg)](https://pypi.org/project/yore/)
 [![gitter](https://badges.gitter.im/join%20chat.svg)](https://app.gitter.im/#/room/#yore:gitter.im)
 
-Manage legacy code with comments.
+**Manage legacy code with comments.**
 
 > In days of yore, ancients penned scripts of eld, their legacy code a relic of arcane lore. These venerable lines, cryptic and profound, whisper the wisdom of bygone masters, shaping our digital realm's very ground.
 >
@@ -20,6 +20,8 @@ For these use-cases, Yore comes to the rescue.
 Yore was born from the will of automating comments I had added along the evolution of my projects. I was usually writing comments such as `TODO: Remove once support for Python 3.8 is dropped`, or `TODO: Remove when we are ready for v1`. One day I decided to make these comments more formal, so I designed a very simple syntax and wrote a tool that would parse them and act on them.
 
 Yore can therefore find comments in your code base, to warn you about upcoming end-of-life dates of Python versions, or outdated code based on the project version. It can also apply transformations to your code, to remove legacy blocks or lines of code or update them.
+
+**Yore is language agnostic.** It works with many of the most popular languages. For now it only supports beginning/end of life dates for Python, but in the future it will likely support more.
 
 ## Quick usage
 
