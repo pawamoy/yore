@@ -366,17 +366,6 @@ class CommandMain:
         Doc("Print debug information."),
     ] = False
 
-    completion: An[
-        bool,
-        cappa.Arg(
-            long=True,
-            action=cappa.ArgAction.completion,
-            choices=("complete", "generate"),
-            help="Print shell-specific completion source.",
-        ),
-        Doc("Completion CLI option."),
-    ] = False
-
 
 def main(
     args: An[list[str] | None, Doc("Arguments passed from the command line.")] = None,
@@ -387,20 +376,28 @@ def main(
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     output = cappa.Output(error_format=f"[bold]{_NAME}[/]: [bold red]error[/]: {{message}}")
+    completion_option: cappa.Arg = cappa.Arg(
+        long=True,
+        action=cappa.ArgAction.completion,
+        choices=["complete", "generate"],
+        help="Print shell-specific completion source.",
+    )
     help_option: cappa.Arg = cappa.Arg(
         short="-h",
         long=True,
         action=cappa.ArgAction.help,
         help="Print the program help and exit.",
     )
+    help_formatter = cappa.HelpFormatter(default_format="Default: {default}.")
+
     try:
         return cappa.invoke(
             CommandMain,
             argv=args,
             output=output,
-            backend=cappa.backend,
-            completion=False,
             help=help_option,
+            completion=completion_option,
+            help_formatter=help_formatter,
         )
-    except cappa.Exit as error:
-        return int(1 if error.code is None else error.code)
+    except cappa.Exit as exit:
+        return int(1 if exit.code is None else exit.code)
