@@ -31,6 +31,7 @@ Terms between `<` and `>` *must* be provided, while terms between `[` and `]` ar
 
 Trailing comments are not supported: comments must be preceded with spaces only. Yore comments are always written on a single line.
 
+The default `PREFIX` is `YORE`. See [Configuration](#configuration).
 
 Terms `eol`, `bol` and `bump` mean "End of Life", "Beginning of Life" and "version bump", respectively.
 
@@ -168,6 +169,42 @@ if something:
 if something_else:  # Indent = 0, not part of the block above.
     print("goodbye")
 ```
+
+## Configuration
+
+Configuration is read by default from one of the following files, in order:
+
+- `config/yore.toml`
+- `yore.toml`
+- `pyproject.toml`
+
+The path to the configuration can be specified with the CLI's `-c`, `--config` option:
+
+```bash
+yore -c path/to/config.toml
+```
+
+In `pyproject.toml`, the configuration must be added under `[tool.yore]`:
+
+```toml
+[tool.yore]
+prefix = "YORE"
+```
+
+In other files, configuration is added at the top-level:
+
+```toml
+prefix = "YORE"
+```
+
+### `prefix`
+
+Defines the prefix to match. Default is `YORE`.
+
+```toml
+prefix = "DUE"
+```
+
 
 ## Commands
 
