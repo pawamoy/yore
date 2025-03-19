@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.0](https://github.com/pawamoy/yore/releases/tag/0.4.0) - 2025-03-19
+
+<small>[Compare with 0.3.4](https://github.com/pawamoy/yore/compare/0.3.4...0.4.0)</small>
+
+### Features
+
+- Add `yore diff` command ([590851d](https://github.com/pawamoy/yore/commit/590851d295e77acbf4cb5c7622d2d115c99c1ed3) by Timothée Mazzucotelli). [Issue-12](https://github.com/pawamoy/yore/issues/12)
+- Support config files, add prefix option ([708a6c0](https://github.com/pawamoy/yore/commit/708a6c03932355ccb1598e1e028dcf23e17762ec) by Timothée Mazzucotelli). [Issue-8](https://github.com/pawamoy/yore/issues/8)
+- Check comments validity ([abd31e3](https://github.com/pawamoy/yore/commit/abd31e3f42616d741c744c578b9b3f72f674e2be) by Timothée Mazzucotelli). [Issue-13](https://github.com/pawamoy/yore/issues/13)
+- Support many more languages and list files with Git ([2f7bb5f](https://github.com/pawamoy/yore/commit/2f7bb5fb92e9ad561068bdc8471908e156cae00e) by Timothée Mazzucotelli). [Issue-4](https://github.com/pawamoy/yore/issues/4)
+
+### Code Refactoring
+
+- Simplify CLI invocation ([c727477](https://github.com/pawamoy/yore/commit/c727477ab5afd34922a67637ebe4afd2c0a17dc9) by Timothée Mazzucotelli).
+- Shorten messages, display original comment ([c49a5b0](https://github.com/pawamoy/yore/commit/c49a5b0f05d8d62dc74c75b54cccdc6f12a75230) by Timothée Mazzucotelli).
+
 ## [0.3.4](https://github.com/pawamoy/yore/releases/tag/0.3.4) - 2025-03-08
 
 <small>[Compare with 0.3.3](https://github.com/pawamoy/yore/compare/0.3.3...0.3.4)</small>
