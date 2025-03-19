@@ -274,7 +274,7 @@ class YoreComment:
             if self.remove:
                 start, end = _scope_range(self.remove, buffer, start)
                 del buffer[start:end]
-                if self.remove == "file":
+                if write and self.remove == "file":
                     self.file.unlink()
 
             elif self.replace:

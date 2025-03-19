@@ -225,13 +225,23 @@ class CommandDiff:
         except (OSError, UnicodeDecodeError):
             return
         new_lines = old_lines.copy()
+        fixed = False
         for comment in sorted(
             yield_buffer_comments(file, new_lines, prefix=self.prefix),
             key=lambda c: c.lineno,
             reverse=True,
         ):
-            comment.fix(buffer=new_lines, bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
-        yield from unified_diff(old_lines, new_lines, fromfile=str(file), tofile=str(file))
+            fixed |= comment.fix(
+                buffer=new_lines,
+                bump=self.bump,
+                eol_within=self.eol_within,
+                bol_within=self.bol_within,
+            )
+            if not new_lines:
+                _logger.debug(f"no more lines in {file}, breaking early")
+                break
+        if fixed:
+            yield from unified_diff(old_lines, new_lines, fromfile=str(file), tofile=str(file))
 
     def _diff_paths(self, paths: list[Path]) -> Iterator[str]:
         for path in paths:
@@ -333,9 +343,16 @@ class CommandFix:
         ):
             if comment.fix(buffer=lines, bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within):
                 count += 1
+                if not lines:
+                    _logger.debug(f"no more lines in {file}, breaking early")
+                    break
         if count:
-            file.write_text("".join(lines))
-            _logger.info(f"fixed {count} comment{'s' if count > 1 else ''} in {file}")
+            if lines:
+                file.write_text("".join(lines))
+                _logger.info(f"fixed {count} comment{'s' if count > 1 else ''} in {file}")
+            else:
+                file.unlink()
+                _logger.info(f"removed {file}")
 
     def __call__(self) -> int:
         """Fix Yore comments."""
