@@ -348,7 +348,8 @@ def get_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
         The Yore comment pattern.
     """
     return re.compile(
-        _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX, re.VERBOSE | re.IGNORECASE
+        _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX,
+        re.VERBOSE | re.IGNORECASE,
     )
 
 
