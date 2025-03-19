@@ -26,29 +26,26 @@ import cappa
 from typing_extensions import Doc
 
 from yore._internal import debug
-from yore._internal.lib import yield_buffer_comments, yield_files, yield_path_comments
+from yore._internal.config import Config, Unset
+from yore._internal.lib import DEFAULT_PREFIX, yield_buffer_comments, yield_files, yield_path_comments
 
 _NAME = "yore"
 
 _logger = logging.getLogger(__name__)
 
-# YORE: EOL 3.9: Remove block.
-_dataclass_opts: dict[str, bool] = {}
-if sys.version_info >= (3, 10):
-    _dataclass_opts["kw_only"] = True
 
+@dataclass(frozen=True)
+class _FromConfig(cappa.ValueFrom):
+    def __init__(self, field: Unset | property, /) -> None:
+        attr_name = field.fget.__name__ if isinstance(field, property) else field.name  # type: ignore[union-attr]
+        super().__init__(self._from_config, attr_name=attr_name)
 
-def _print_and_exit(
-    func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
-    code: An[int, Doc("The status code to exit with.")] = 0,
-) -> Callable[[], None]:
-    """Argument action callable to print something and exit immediately."""
-
-    @wraps(func)
-    def _inner() -> None:
-        raise cappa.Exit(func() or "", code=code)
-
-    return _inner
+    @staticmethod
+    def _from_config(attr_name: str) -> Any:
+        # DUE: EOL 3.9: Replace `_load_config()` with `CommandMain._load_config()` within line.
+        config = _load_config()
+        value = getattr(config, attr_name)
+        return cappa.Empty if isinstance(value, Unset) else value
 
 
 def _parse_timedelta(value: str) -> timedelta:
@@ -56,6 +53,12 @@ def _parse_timedelta(value: str) -> timedelta:
     number, unit = re.match(r" *(\d+) *([a-z])[a-z]* *", value).groups()  # type: ignore[union-attr]
     multiplier = {"d": 1, "w": 7, "m": 31, "y": 365}[unit]
     return timedelta(days=int(number) * multiplier)
+
+
+# DUE: EOL 3.9: Remove block.
+_dataclass_opts: dict[str, bool] = {}
+if sys.version_info >= (3, 10):
+    _dataclass_opts["kw_only"] = True
 
 
 @cappa.command(
@@ -68,7 +71,7 @@ def _parse_timedelta(value: str) -> timedelta:
         """,
     ),
 )
-# YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class CommandCheck:
     """Command to check Yore comments."""
@@ -111,12 +114,24 @@ class CommandCheck:
         ),
     ] = None
 
-    def __call__(self) -> Any:
+    prefix: An[
+        str,
+        cappa.Arg(
+            short="-p",
+            long=True,
+            num_args=1,
+            default=_FromConfig(Config.prefix),
+            show_default=f"{Config.prefix} or `{DEFAULT_PREFIX}`",
+        ),
+        Doc("""The prefix for Yore comments."""),
+    ] = DEFAULT_PREFIX
+
+    def __call__(self) -> int:
         """Check Yore comments."""
         ok = True
         paths = self.paths or [Path(".")]
         for path in paths:
-            for comment in yield_path_comments(path):
+            for comment in yield_path_comments(path, prefix=self.prefix):
                 ok &= comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
         return 0 if ok else 1
 
@@ -130,7 +145,7 @@ class CommandCheck:
         """,
     ),
 )
-# YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class CommandFix:
     """Command to fix Yore comments."""
@@ -173,17 +188,33 @@ class CommandFix:
         ),
     ] = None
 
+    prefix: An[
+        str,
+        cappa.Arg(
+            short="-p",
+            long=True,
+            num_args=1,
+            default=_FromConfig(Config.prefix),
+            show_default=f"{Config.prefix}",
+        ),
+        Doc("""The prefix for Yore comments."""),
+    ] = DEFAULT_PREFIX
+
     def _fix(self, file: Path) -> None:
         lines = file.read_text().splitlines(keepends=True)
         count = 0
-        for comment in sorted(yield_buffer_comments(file, lines), key=lambda c: c.lineno, reverse=True):
+        for comment in sorted(
+            yield_buffer_comments(file, lines, prefix=self.prefix),
+            key=lambda c: c.lineno,
+            reverse=True,
+        ):
             if comment.fix(buffer=lines, bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within):
                 count += 1
         if count:
             file.write_text("".join(lines))
             _logger.info(f"fixed {count} comment{'s' if count > 1 else ''} in {file}")
 
-    def __call__(self) -> Any:
+    def __call__(self) -> int:
         """Fix Yore comments."""
         paths = self.paths or [Path(".")]
         for path in paths:
@@ -193,6 +224,27 @@ class CommandFix:
                 for file in yield_files(path):
                     self._fix(file)
         return 0
+
+
+# DUE: EOL 3.9: Remove block.
+def _print_and_exit(
+    func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
+    code: An[int, Doc("The status code to exit with.")] = 0,
+) -> Callable[[], None]:
+    """Argument action callable to print something and exit immediately."""
+
+    @wraps(func)
+    def _inner() -> None:
+        raise cappa.Exit(func() or "", code=code)
+
+    return _inner
+
+
+# DUE: EOL 3.9: Remove block.
+def _load_config(file: Path | None = None) -> Config:
+    if CommandMain._CONFIG is None:
+        CommandMain._CONFIG = Config.from_file(file) if file else Config.from_default_locations()
+    return CommandMain._CONFIG
 
 
 @cappa.command(
@@ -253,12 +305,48 @@ class CommandFix:
         """,
     ),
 )
-# YORE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class CommandMain:
     """Command to manage legacy code in your code base with YORE comments."""
 
     subcommand: An[cappa.Subcommands[CommandCheck | CommandFix], Doc("The selected subcommand.")]
+
+    # DUE: EOL 3.9: Replace `# ` with `` within block.
+    # @staticmethod
+    # def _load_config(file: Path | None = None) -> Config:
+    #     if CommandMain._CONFIG is None:
+    #         CommandMain._CONFIG = Config.from_file(file) if file else Config.from_default_locations()
+    #     return CommandMain._CONFIG
+
+    # DUE: EOL 3.9: Replace `# ` with `` within block.
+    # @staticmethod
+    # def _print_and_exit(
+    #     func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
+    #     code: An[int, Doc("The status code to exit with.")] = 0,
+    # ) -> Callable[[], None]:
+    #     """Argument action callable to print something and exit immediately."""
+    #
+    #     @wraps(func)
+    #     def _inner() -> None:
+    #         raise cappa.Exit(func() or "", code=code)
+    #
+    #     return _inner
+
+    # DUE: EOL 3.9: Regex-replace `Config \| None = .*` with `ClassVar[Config | None] = None` within line.
+    _CONFIG: Config | None = field(default=None, init=False, repr=False)
+
+    config: An[
+        Config,
+        cappa.Arg(
+            short="-c",
+            long=True,
+            parse=_load_config,
+            propagate=True,
+            show_default="`config/yore.toml`, `yore.toml`, or `pyproject.toml`",
+        ),
+        Doc("Path to the configuration file."),
+    ] = field(default_factory=_load_config)
 
     version: An[
         bool,

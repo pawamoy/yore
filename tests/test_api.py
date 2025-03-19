@@ -133,7 +133,7 @@ def test_single_locations(public_api: griffe.Module) -> None:
 
 def test_api_matches_inventory(inventory: Inventory, public_objects: list[griffe.Object | griffe.Alias]) -> None:
     """All public objects are added to the inventory."""
-    ignore_names = {"__getattr__", "__init__", "__repr__", "__str__", "__post_init__"}
+    ignore_names = {"__bool__", "__getattr__", "__init__", "__post_init__", "__repr__", "__str__"}
     not_in_inventory = [
         obj.path for obj in public_objects if obj.name not in ignore_names and obj.path not in inventory
     ]
