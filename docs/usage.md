@@ -205,6 +205,21 @@ Defines the prefix to match. Default is `YORE`.
 prefix = "DUE"
 ```
 
+### `diff.highlight`
+
+Defines the shell command to run to highlight diffs (see [`yore diff` command](#yore-diff)). Default is none (no highlighting).
+
+```toml
+diff.highlight = "delta"
+```
+
+Example commands:
+
+- `colordiff`, see https://www.colordiff.org/
+- `delta`, see https://github.com/dandavison/delta
+- `diff-so-fancy | less -RF`, see https://github.com/so-fancy/diff-so-fancy
+- `python -m rich.syntax -x diff -`, see https://rich.readthedocs.io/en/latest/syntax.html#syntax-cli
+- `vim -R -`
 
 ## Commands
 
@@ -232,7 +247,41 @@ By default Yore will run `git ls-files` in the specified path (or current workin
 
 ```bash
 yore check src scripts/this_module.py docs/*.py
-# same thing for yore fix
+# same thing for `yore diff` and `yore fix`
+```
+
+### `yore diff`
+
+Like `yore fix`, but in dry-run mode (don't actually write on disk), and print the diff to the console. The diff can be syntax-highlighted with a shell command of your choice, thanks to the `-H`, `--highlight` CLI flag or the [`diff.highlight` configuration option](#diffhighlight).
+
+```diff
+% yore diff
+--- pyproject.toml
++++ pyproject.toml
+@@ -104,8 +104,6 @@
+     "mkdocs-minify-plugin>=0.8",
+     "mkdocs-section-index>=0.3",
+     "mkdocstrings[python]>=0.29",
+-    # DUE: EOL 3.10: Remove line.
+-    "tomli>=2.0; python_version < '3.11'",
+ ]
+
+ [tool.uv]
+--- scripts/gen_credits.py
++++ scripts/gen_credits.py
+@@ -16,11 +16,7 @@
+ from jinja2.sandbox import SandboxedEnvironment
+ from packaging.requirements import Requirement
+
+-# DUE: EOL 3.10: Replace block with line 2.
+-if sys.version_info >= (3, 11):
+-    import tomllib
+-else:
+-    import tomli as tomllib
++import tomllib
+
+ project_dir = Path(os.getenv("MKDOCS_CONFIG_DIR", "."))
+ with project_dir.joinpath("pyproject.toml").open("rb") as pyproject_file:
 ```
 
 ### `yore fix`

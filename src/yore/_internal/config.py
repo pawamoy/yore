@@ -61,12 +61,13 @@ if sys.version_info >= (3, 10):
     _dataclass_opts["kw_only"] = True
 
 
-# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class Config:
     """Configuration for the insiders project."""
 
     prefix: An[list[str] | Unset, Doc("The prefix for Yore comments.")] = config_field("prefix")  # noqa: RUF009
+    diff_highlight: An[str | Unset, Doc("The command to highlight diffs.")] = config_field("diff.highlight")  # noqa: RUF009
 
     @classmethod
     def _get(

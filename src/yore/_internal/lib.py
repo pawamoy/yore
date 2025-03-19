@@ -131,7 +131,7 @@ if sys.version_info >= (3, 10):
     _dataclass_opts["kw_only"] = True
 
 
-# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class YoreComment:
     """A Yore comment."""
@@ -385,7 +385,7 @@ def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[P
             elif path.is_dir() and not any(path.match(pattern) for pattern in exclude):
                 yield from yield_files(path, exclude=exclude)
     else:
-        for filepath in git_files.split("\0"):
+        for filepath in git_files.strip("\0").split("\0"):
             yield directory / filepath
 
 

@@ -13,14 +13,16 @@ from __future__ import annotations
 
 import logging
 import re
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from datetime import timedelta
+from difflib import unified_diff
 from functools import wraps
 from inspect import cleandoc
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable
 from typing import Annotated as An
-from typing import Any, Callable
 
 import cappa
 from typing_extensions import Doc
@@ -28,6 +30,10 @@ from typing_extensions import Doc
 from yore._internal import debug
 from yore._internal.config import Config, Unset
 from yore._internal.lib import DEFAULT_PREFIX, yield_buffer_comments, yield_files, yield_path_comments
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 
 _NAME = "yore"
 
@@ -71,7 +77,7 @@ if sys.version_info >= (3, 10):
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class CommandCheck:
     """Command to check Yore comments."""
@@ -137,6 +143,117 @@ class CommandCheck:
 
 
 @cappa.command(
+    name="diff",
+    help="See the diff you would get after fixing comments.",
+    description=cleandoc(
+        """
+        This command fixes all relevant Yore comments, then computes and prints
+        a Git-like diff in the console.
+        """,
+    ),
+)
+# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
+@dataclass(**_dataclass_opts)
+class CommandDiff:
+    """Command to diff Yore comments."""
+
+    paths: An[
+        list[Path],
+        cappa.Arg(),
+        Doc("Path to files or directories to diff."),
+    ] = field(default_factory=list)
+
+    bump: An[
+        str | None,
+        cappa.Arg(short=True, long=True, value_name="VERSION"),
+        Doc("The next version of your project."),
+    ] = None
+
+    eol_within: An[
+        timedelta | None,
+        cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
+        Doc(
+            """
+            The time delta to start diffing before the End of Life of a Python version.
+            It is provided in a human-readable format, like `2 weeks` or `1 month`.
+            Spaces are optional, and the unit can be shortened to a single letter:
+            `d` for days, `w` for weeks, `m` for months, and `y` for years.
+            """,
+        ),
+    ] = None
+
+    bol_within: An[
+        timedelta | None,
+        cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
+        Doc(
+            """
+            The time delta to start diffing before the Beginning of Life of a Python version.
+            It is provided in a human-readable format, like `2 weeks` or `1 month`.
+            Spaces are optional, and the unit can be shortened to a single letter:
+            `d` for days, `w` for weeks, `m` for months, and `y` for years.
+            """,
+        ),
+    ] = None
+
+    highlight: An[
+        str | None,
+        cappa.Arg(
+            short="-H",
+            long="--highlight",
+            num_args=1,
+            default=_FromConfig(Config.diff_highlight),
+            show_default=f"{Config.diff_highlight}",
+        ),
+        Doc("The command to highlight diffs."),
+    ] = None
+
+    prefix: An[
+        str,
+        cappa.Arg(
+            short="-p",
+            long=True,
+            num_args=1,
+            default=_FromConfig(Config.prefix),
+            show_default=f"{Config.prefix} or `{DEFAULT_PREFIX}`",
+        ),
+        Doc("""The prefix for Yore comments."""),
+    ] = DEFAULT_PREFIX
+
+    def _diff(self, file: Path) -> Iterator[str]:
+        old_lines = file.read_text().splitlines(keepends=True)
+        new_lines = old_lines.copy()
+        for comment in sorted(
+            yield_buffer_comments(file, new_lines, prefix=self.prefix),
+            key=lambda c: c.lineno,
+            reverse=True,
+        ):
+            comment.fix(buffer=new_lines, bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
+        yield from unified_diff(old_lines, new_lines, fromfile=str(file), tofile=str(file))
+
+    def _diff_paths(self, paths: list[Path]) -> Iterator[str]:
+        for path in paths:
+            if path.is_file():
+                yield from self._diff(path)
+            else:
+                for file in sorted(yield_files(path)):
+                    yield from self._diff(file)
+
+    def __call__(self) -> int:
+        """Diff Yore comments."""
+        lines = self._diff_paths(self.paths or [Path(".")])
+        if self.highlight:
+            process = subprocess.Popen(self.highlight, shell=True, text=True, stdin=subprocess.PIPE)  # noqa: S602
+            for line in lines:
+                process.stdin.write(line)  # type: ignore[union-attr]
+            process.stdin.close()  # type: ignore[union-attr]
+            process.wait()
+            return int(process.returncode)
+        for line in lines:
+            print(line, end="")
+        return 0
+
+
+@cappa.command(
     name="fix",
     help="Fix Yore comments and the associated code lines.",
     description=cleandoc(
@@ -145,7 +262,7 @@ class CommandCheck:
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class CommandFix:
     """Command to fix Yore comments."""
@@ -305,12 +422,12 @@ def _load_config(file: Path | None = None) -> Config:
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**dataclass_opts` with `kw_only=True` within line.
+# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
 @dataclass(**_dataclass_opts)
 class CommandMain:
     """Command to manage legacy code in your code base with YORE comments."""
 
-    subcommand: An[cappa.Subcommands[CommandCheck | CommandFix], Doc("The selected subcommand.")]
+    subcommand: An[cappa.Subcommands[CommandCheck | CommandDiff | CommandFix], Doc("The selected subcommand.")]
 
     # DUE: EOL 3.9: Replace `# ` with `` within block.
     # @staticmethod

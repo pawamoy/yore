@@ -5,7 +5,7 @@ Manage legacy code with comments.
 
 from __future__ import annotations
 
-from yore._internal.cli import CommandCheck, CommandFix, CommandMain, main
+from yore._internal.cli import CommandCheck, CommandDiff, CommandFix, CommandMain, main
 from yore._internal.config import Config, Unset, config_field
 from yore._internal.lib import (
     COMMENT_PATTERN,
@@ -30,6 +30,7 @@ __all__: list[str] = [
     "DEFAULT_EXCLUDE",
     "DEFAULT_PREFIX",
     "CommandCheck",
+    "CommandDiff",
     "CommandFix",
     "CommandMain",
     "Config",

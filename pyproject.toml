@@ -113,3 +113,4 @@ default-groups = ["maintain", "ci", "docs"]
 
 [tool.yore]
 prefix = "DUE"
+diff.highlight = "colordiff"
