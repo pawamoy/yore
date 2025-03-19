@@ -21,7 +21,7 @@ Terms between `<` and `>` *must* be provided, while terms between `[` and `]` ar
 - `#`: Nim, Perl, PHP, Python, R, Ruby, shell, YAML
 - `//`: C, C++, Go, Java, Javascript, Rust, Swift
 - `--`: Haskell, Lua, SQL
-- `;"`: Lisp, Scheme
+- `;`: Lisp, Scheme
 - `%`: MATLAB
 - `'`: VBA
 - `/*`: C, C++, Java, Javascript, CSS
