@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.2](https://github.com/pawamoy/yore/releases/tag/0.4.2) - 2025-03-19
+
+<small>[Compare with 0.4.1](https://github.com/pawamoy/yore/compare/0.4.1...0.4.2)</small>
+
+### Bug Fixes
+
+- Don't delete files during diff ([d34b930](https://github.com/pawamoy/yore/commit/d34b93068ff84a821b90fd4dc03bc529eac01f7b) by Timothée Mazzucotelli).
+
 ## [0.4.1](https://github.com/pawamoy/yore/releases/tag/0.4.1) - 2025-03-19
 
 <small>[Compare with 0.4.0](https://github.com/pawamoy/yore/compare/0.4.0...0.4.1)</small>
