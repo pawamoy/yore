@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
 from yore._internal import lib
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize(
@@ -62,3 +60,21 @@ def test_removing_file(tmp_path: Path) -> None:
     file.write_text("# YORE: Bump 1: Remove file.")
     next(lib.yield_file_comments(file)).fix(bump="1")
     assert not file.exists()
+
+
+def test_check_messages(caplog: pytest.LogCaptureFixture) -> None:
+    """Verify contents of `check` messages."""
+    with caplog.at_level(0):
+        lib.YoreComment(
+            file=Path("test.txt"),
+            lineno=1,
+            raw="hello",
+            prefix="YORE",
+            suffix="",
+            kind="eol",
+            version="3.8",
+            remove="line",
+        ).check(eol_within=timedelta(days=0))
+        message = caplog.messages[0]
+    assert " since " in message
+    assert " in " not in message

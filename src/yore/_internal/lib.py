@@ -125,6 +125,10 @@ def _delta(until: Date) -> TimeDelta:
     return until - DateTime.now(tz=TimeZone.utc).date()
 
 
+def _past(date: Date) -> bool:
+    return date <= DateTime.now(tz=TimeZone.utc).date()
+
+
 # DUE: EOL 3.9: Remove block.
 _dataclass_opts: dict[str, bool] = {}
 if sys.version_info >= (3, 10):
@@ -219,14 +223,16 @@ class YoreComment:
         msg_location = f"{self.file}:{self.lineno}:"
         if self.is_eol:
             if eol_within and _within(eol_within, self.eol):
-                _logger.warning(f"{msg_location} in ~{naturaldelta(_delta(self.eol))} {self.comment}")
+                delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+                _logger.warning(f"{msg_location} {delta} {self.comment}")
             elif _within(TimeDelta(days=0), self.eol):
                 _logger.error(f"{msg_location} since {self.eol} {self.comment}")
             else:
                 return True
         elif self.is_bol:
             if bol_within and _within(bol_within, self.bol):
-                _logger.warning(f"{msg_location} in ~{naturaldelta(_delta(self.bol))} {self.comment}")
+                delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+                _logger.warning(f"{msg_location} {delta} {self.comment}")
             elif _within(TimeDelta(days=0), self.bol):
                 _logger.error(f"{msg_location} since {self.bol} {self.comment}")
             else:
