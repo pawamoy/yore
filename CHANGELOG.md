@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.3](https://github.com/pawamoy/yore/releases/tag/0.4.3) - 2025-03-26
+
+<small>[Compare with 0.4.2](https://github.com/pawamoy/yore/compare/0.4.2...0.4.3)</small>
+
+### Bug Fixes
+
+- Parse BOL comments ([91811d7](https://github.com/pawamoy/yore/commit/91811d7ec12d7388ad07c011efb1935e1389a8c5) by Timothée Mazzucotelli). [Issue-15](https://github.com/pawamoy/yore/issues/15)
+- Output "since date" for EOL in the past, not "in delta" ([7d6bb67](https://github.com/pawamoy/yore/commit/7d6bb6741313e0f8845ecc375ad51b11ecac548e) by Timothée Mazzucotelli). [Issue-14](https://github.com/pawamoy/yore/issues/14)
+
+### Code Refactoring
+
+- Set short timeout for downloading BOL/EOL Python dates ([3bd3f49](https://github.com/pawamoy/yore/commit/3bd3f492eba24d7c0de24bb2f8908d10594189b0) by Timothée Mazzucotelli).
+
 ## [0.4.2](https://github.com/pawamoy/yore/releases/tag/0.4.2) - 2025-03-19
 
 <small>[Compare with 0.4.1](https://github.com/pawamoy/yore/compare/0.4.1...0.4.2)</small>
