@@ -489,7 +489,7 @@ class _LazyPythonDates:
         return Date(year, month, day)
 
     def _fetch(self) -> None:
-        data = json.loads(urlopen(self.EOL_DATA_URL).read())  # noqa: S310
+        data = json.loads(urlopen(self.EOL_DATA_URL, timeout=3).read())  # noqa: S310
         for version, info in data.items():
             bol_date = self._to_date(info["first_release"])
             eol_date = self._to_date(info["end_of_life"])
