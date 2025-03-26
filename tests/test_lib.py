@@ -78,3 +78,37 @@ def test_check_messages(caplog: pytest.LogCaptureFixture) -> None:
         message = caplog.messages[0]
     assert " since " in message
     assert " in " not in message
+
+
+@pytest.mark.parametrize(
+    "comment_syntax",
+    ["# ", "// ", "-- ", ";", "% ", "'", "' ", "/* ", "<!-- ", "{# ", "{#- ", "(* "],
+)
+def test_supported_comment_syntax(comment_syntax: str) -> None:
+    """Verify that supported comment syntax is correctly identified."""
+    assert list(lib.yield_buffer_comments(file=Path("test.txt"), lines=[f"{comment_syntax}YORE: Bump 1: Remove line."]))
+
+
+@pytest.mark.parametrize(
+    "comment",
+    [
+        "Bump 1: Remove line.",
+        "Bump 1: Remove block.",
+        "Bump 1: Remove file.",
+        "Bump 1: Replace `a` with `` within line.",
+        "Bump 1: Replace `a` with `` within block.",
+        "Bump 1: Replace `a` with `` within file.",
+        "Bump 1: Regex-replace `a` with `` within line.",
+        "Bump 1: Regex-replace `a` with `` within block.",
+        "Bump 1: Regex-replace `a` with `` within file.",
+        "Bump 1: Replace block with line 2.",
+        "Bump 1: Replace file with line 2.",
+        "Bump 1: Replace block with lines 2-10.",
+        "Bump 1: Replace file with line 2-10.",
+        "BOL 3.8: Remove line.",
+        "EOL 3.8: Remove line.",
+    ],
+)
+def test_supported_comments(comment: str) -> None:
+    """Verify that supported comments are correctly identified."""
+    assert list(lib.yield_buffer_comments(file=Path("test.txt"), lines=[f"# YORE: {comment}"]))

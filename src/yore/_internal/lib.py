@@ -334,7 +334,7 @@ _PATTERN_PREFIX = rf"^(?P<prefix>\s*(?:{'|'.join(sorted(COMMENT_PREFIXES))})PREF
 _PATTERN_SUFFIX = r"(?P<suffix>\.?.*)$"
 
 COMMENT_PATTERN: str = r"""
-    (?P<kind>bump|eol)\ (?P<version>[^:]+):\ (?:
+    (?P<kind>bol|bump|eol)\ (?P<version>[^:]+):\ (?:
         remove\ (?P<remove>block|file|line)
         |
         replace\ (?P<replace>block|file|line)\ with\ (?:
