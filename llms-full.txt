@@ -124,7 +124,7 @@ Attributes:
 ## COMMENT_PATTERN
 
 ```
-COMMENT_PATTERN: str = "\n    (?P<kind>bump|eol)\\ (?P<version>[^:]+):\\ (?:\n        remove\\ (?P<remove>block|file|line)\n        |\n        replace\\ (?P<replace>block|file|line)\\ with\\ (?:\n            line\\ (?P<line>\\d+)\n            |\n            lines\\ (?P<lines>[\\d, -]+)\n            |\n            `(?P<string>.+)`\n        )\n        |\n        (?P<regex>regex-)?replace\\ `(?P<pattern1>.+)`\\ with\\ `(?P<pattern2>.*)`\\ within\\ (?P<within>block|file|line)\n    )\n"
+COMMENT_PATTERN: str = "\n    (?P<kind>bol|bump|eol)\\ (?P<version>[^:]+):\\ (?:\n        remove\\ (?P<remove>block|file|line)\n        |\n        replace\\ (?P<replace>block|file|line)\\ with\\ (?:\n            line\\ (?P<line>\\d+)\n            |\n            lines\\ (?P<lines>[\\d, -]+)\n            |\n            `(?P<string>.+)`\n        )\n        |\n        (?P<regex>regex-)?replace\\ `(?P<pattern1>.+)`\\ with\\ `(?P<pattern2>.*)`\\ within\\ (?P<within>block|file|line)\n    )\n"
 
 ```
 
@@ -1157,14 +1157,16 @@ def check(
     msg_location = f"{self.file}:{self.lineno}:"
     if self.is_eol:
         if eol_within and _within(eol_within, self.eol):
-            _logger.warning(f"{msg_location} in ~{naturaldelta(_delta(self.eol))} {self.comment}")
+            delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+            _logger.warning(f"{msg_location} {delta} {self.comment}")
         elif _within(TimeDelta(days=0), self.eol):
             _logger.error(f"{msg_location} since {self.eol} {self.comment}")
         else:
             return True
     elif self.is_bol:
         if bol_within and _within(bol_within, self.bol):
-            _logger.warning(f"{msg_location} in ~{naturaldelta(_delta(self.bol))} {self.comment}")
+            delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+            _logger.warning(f"{msg_location} {delta} {self.comment}")
         elif _within(TimeDelta(days=0), self.bol):
             _logger.error(f"{msg_location} since {self.bol} {self.comment}")
         else:
