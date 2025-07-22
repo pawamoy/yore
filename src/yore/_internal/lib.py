@@ -342,10 +342,10 @@ COMMENT_PATTERN: str = r"""
             |
             lines\ (?P<lines>[\d, -]+)
             |
-            `(?P<string>.+)`
+            `(?P<string>.+?)`
         )
         |
-        (?P<regex>regex-)?replace\ `(?P<pattern1>.+)`\ with\ `(?P<pattern2>.*)`\ within\ (?P<within>block|file|line)
+        (?P<regex>regex-)?replace\ `(?P<pattern1>.+?)`\ with\ `(?P<pattern2>.*?)`\ within\ (?P<within>block|file|line)
     )
 """
 """The Yore comment pattern, as a regular expression."""
