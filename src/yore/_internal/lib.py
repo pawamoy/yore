@@ -377,7 +377,7 @@ def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[P
     exclude = DEFAULT_EXCLUDE if exclude is None else exclude
     _logger.debug(f"{directory}: scanning...")
     try:
-        git_files = subprocess.run(  # noqa: S603
+        git_files = subprocess.run(
             ["git", "ls-files", "-z"],  # noqa: S607
             capture_output=True,
             cwd=directory,
