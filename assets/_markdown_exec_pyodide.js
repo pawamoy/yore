@@ -16,7 +16,7 @@ function clearOutput(element) {
 }
 
 async function evaluatePython(pyodide, editor, output, session) {
-    pyodide.setStdout({ batched: (string) => { writeOutput(output, string); } });
+    pyodide.setStdout({ batched: (string) => { writeOutput(output, new Option(string).innerHTML); } });
     let result, code = editor.getValue();
     clearOutput(output);
     try {
@@ -77,7 +77,15 @@ function updateTheme(editor, light, dark) {
     });
 }
 
-async function setupPyodide(idPrefix, install = null, themeLight = 'tomorrow', themeDark = 'tomorrow_night', session = null) {
+async function setupPyodide(
+    idPrefix,
+    install = null,
+    themeLight = 'tomorrow',
+    themeDark = 'tomorrow_night',
+    session = null,
+    minLines = 5,
+    maxLines = 30,
+) {
     const editor = ace.edit(idPrefix + "editor");
     const run = document.getElementById(idPrefix + "run");
     const clear = document.getElementById(idPrefix + "clear");
@@ -87,6 +95,12 @@ async function setupPyodide(idPrefix, install = null, themeLight = 'tomorrow', t
 
     editor.session.setMode("ace/mode/python");
     setTheme(editor, getTheme(), themeLight, themeDark);
+
+    editor.setOption("minLines", minLines);
+    editor.setOption("maxLines", maxLines);
+
+    // Force editor to resize after setting options
+    editor.resize();
 
     writeOutput(output, "Initializing...");
     let pyodide = await pyodidePromise;
@@ -101,6 +115,8 @@ async function setupPyodide(idPrefix, install = null, themeLight = 'tomorrow', t
             writeOutput(output, `Could not install one or more packages: ${install.join(", ")}\n`);
             writeOutput(output, new Option(error.toString()).innerHTML);
         }
+    } else {
+        clearOutput(output);
     }
     run.onclick = () => evaluatePython(pyodide, editor, output, session);
     clear.onclick = () => clearOutput(output);
