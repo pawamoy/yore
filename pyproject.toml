@@ -30,7 +30,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "cappa>=0.22",
+    "cappa>=0.29",
     "humanize>=4.9",
     "packaging>=24.1",
 ]
