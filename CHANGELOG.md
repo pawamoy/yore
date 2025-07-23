@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.4](https://github.com/pawamoy/yore/releases/tag/0.4.4) - 2025-07-23
+
+<small>[Compare with 0.4.3](https://github.com/pawamoy/yore/compare/0.4.3...0.4.4)</small>
+
+### Code Refactoring
+
+- Make regular expression non-greedy for content within backticks ([4529e72](https://github.com/pawamoy/yore/commit/4529e72fa0790fad199f414b8960ed457b98a06b) by Timothée Mazzucotelli).
+
 ## [0.4.3](https://github.com/pawamoy/yore/releases/tag/0.4.3) - 2025-03-26
 
 <small>[Compare with 0.4.2](https://github.com/pawamoy/yore/compare/0.4.2...0.4.3)</small>
