@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.5](https://github.com/pawamoy/yore/releases/tag/0.4.5) - 2025-07-31
+
+<small>[Compare with 0.4.4](https://github.com/pawamoy/yore/compare/0.4.4...0.4.5)</small>
+
+### Build
+
+- Depend on Cappa 0.29 ([cccad38](https://github.com/pawamoy/yore/commit/cccad3892aa2e4de0014e5dc85cde4b762463b8d) by Timothée Mazzucotelli).
+
+### Bug Fixes
+
+- Use actual BOL date when checking BOL comments ([4a99e7d](https://github.com/pawamoy/yore/commit/4a99e7df6c672c054bea0789656b6ef444132e31) by Timothée Mazzucotelli).
+
 ## [0.4.4](https://github.com/pawamoy/yore/releases/tag/0.4.4) - 2025-07-23
 
 <small>[Compare with 0.4.3](https://github.com/pawamoy/yore/compare/0.4.3...0.4.4)</small>
