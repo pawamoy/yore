@@ -231,7 +231,7 @@ class YoreComment:
                 return True
         elif self.is_bol:
             if bol_within and _within(bol_within, self.bol):
-                delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+                delta = f"since {self.bol}" if _past(self.bol) else f"in ~{naturaldelta(_delta(self.bol))}"
                 _logger.warning(f"{msg_location} {delta} {self.comment}")
             elif _within(TimeDelta(days=0), self.bol):
                 _logger.error(f"{msg_location} since {self.bol} {self.comment}")
