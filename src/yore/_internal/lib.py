@@ -273,7 +273,7 @@ class YoreComment:
             Whether the comment was fixed.
         """
         write = buffer is None
-        buffer = buffer or self.file.read_text().splitlines(keepends=True)
+        buffer = buffer or self.file.read_text(encoding="utf8").splitlines(keepends=True)
 
         # Check if the fix should be applied.
         if (
@@ -437,7 +437,7 @@ def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
         Yore comments.
     """
     try:
-        lines = file.read_text().splitlines()
+        lines = file.read_text(encoding="utf8").splitlines()
     except (OSError, UnicodeDecodeError):
         return
     yield from yield_buffer_comments(file, lines, prefix=prefix)

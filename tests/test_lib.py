@@ -57,7 +57,7 @@ def test_match_to_lines(lines: str, expected_lines: list[int]) -> None:
 def test_removing_file(tmp_path: Path) -> None:
     """Files are removed by "remove" comments and "file" scope."""
     file = tmp_path / "file1.py"
-    file.write_text("# YORE: Bump 1: Remove file.")
+    file.write_text("# YORE: Bump 1: Remove file.", encoding="utf8")
     next(lib.yield_file_comments(file)).fix(bump="1")
     assert not file.exists()
 
