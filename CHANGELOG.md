@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.6](https://github.com/pawamoy/yore/releases/tag/0.4.6) - 2025-11-10
+
+<small>[Compare with 0.4.5](https://github.com/pawamoy/yore/compare/0.4.5...0.4.6)</small>
+
+### Bug Fixes
+
+- Skip unknown Python versions instead of crashing ([5a80045](https://github.com/pawamoy/yore/commit/5a80045da2f6396832cefdef85d5b1d507b1c62f) by Timothée Mazzucotelli).
+
+### Code Refactoring
+
+- Update the code base for Python 3.10 ([ce2f42c](https://github.com/pawamoy/yore/commit/ce2f42c5cefb2b004488d58b383205369a8add97) by Timothée Mazzucotelli).
+- Specify encoding when reading/writing files ([6c82359](https://github.com/pawamoy/yore/commit/6c8235905b9addaa66595bf101acc344af5ba593) by Timothée Mazzucotelli).
+
 ## [0.4.5](https://github.com/pawamoy/yore/releases/tag/0.4.5) - 2025-07-31
 
 <small>[Compare with 0.4.4](https://github.com/pawamoy/yore/compare/0.4.4...0.4.5)</small>
