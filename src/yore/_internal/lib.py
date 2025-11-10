@@ -466,7 +466,7 @@ def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
 
 
 class _LazyPythonDates:
-    EOL_DATA_URL = "https://raw.githubusercontent.com/python/devguide/main/include/release-cycle.json"
+    EOL_DATA_URL = "https://peps.python.org/api/release-cycle.json"
     _dates: ClassVar[dict[str, tuple[Date, Date]]] = {}
 
     def __getitem__(self, version: str) -> tuple[Date, Date]:
