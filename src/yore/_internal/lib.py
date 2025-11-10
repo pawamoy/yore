@@ -4,7 +4,6 @@ import json
 import logging
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
@@ -129,14 +128,7 @@ def _past(date: Date) -> bool:
     return date <= DateTime.now(tz=TimeZone.utc).date()
 
 
-# DUE: EOL 3.9: Remove block.
-_dataclass_opts: dict[str, bool] = {}
-if sys.version_info >= (3, 10):
-    _dataclass_opts["kw_only"] = True
-
-
-# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
-@dataclass(**_dataclass_opts)
+@dataclass(kw_only=True)
 class YoreComment:
     """A Yore comment."""
 

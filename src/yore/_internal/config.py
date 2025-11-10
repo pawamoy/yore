@@ -55,14 +55,7 @@ def config_field(
     return dataclass_field(default=Unset(key, transform=transform))
 
 
-# DUE: EOL 3.9: Remove block.
-_dataclass_opts: dict[str, bool] = {}
-if sys.version_info >= (3, 10):
-    _dataclass_opts["kw_only"] = True
-
-
-# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
-@dataclass(**_dataclass_opts)
+@dataclass(kw_only=True)
 class Config:
     """Configuration for the insiders project."""
 

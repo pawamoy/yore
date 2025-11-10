@@ -14,14 +14,13 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-import sys
 from dataclasses import dataclass, field
 from datetime import timedelta
 from difflib import unified_diff
 from functools import wraps
 from inspect import cleandoc
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 from typing import Annotated as An
 
 import cappa
@@ -48,8 +47,7 @@ class _FromConfig(cappa.ValueFrom):
 
     @staticmethod
     def _from_config(attr_name: str) -> Any:
-        # DUE: EOL 3.9: Replace `_load_config()` with `CommandMain._load_config()` within line.
-        config = _load_config()
+        config = CommandMain._load_config()
         value = getattr(config, attr_name)
         return cappa.Empty if isinstance(value, Unset) else value
 
@@ -59,12 +57,6 @@ def _parse_timedelta(value: str) -> timedelta:
     number, unit = re.match(r" *(\d+) *([a-z])[a-z]* *", value).groups()  # type: ignore[union-attr]
     multiplier = {"d": 1, "w": 7, "m": 31, "y": 365}[unit]
     return timedelta(days=int(number) * multiplier)
-
-
-# DUE: EOL 3.9: Remove block.
-_dataclass_opts: dict[str, bool] = {}
-if sys.version_info >= (3, 10):
-    _dataclass_opts["kw_only"] = True
 
 
 @cappa.command(
@@ -77,8 +69,7 @@ if sys.version_info >= (3, 10):
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
-@dataclass(**_dataclass_opts)
+@dataclass(kw_only=True)
 class CommandCheck:
     """Command to check Yore comments."""
 
@@ -152,8 +143,7 @@ class CommandCheck:
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
-@dataclass(**_dataclass_opts)
+@dataclass(kw_only=True)
 class CommandDiff:
     """Command to diff Yore comments."""
 
@@ -275,8 +265,7 @@ class CommandDiff:
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
-@dataclass(**_dataclass_opts)
+@dataclass(kw_only=True)
 class CommandFix:
     """Command to fix Yore comments."""
 
@@ -366,27 +355,6 @@ class CommandFix:
         return 0
 
 
-# DUE: EOL 3.9: Remove block.
-def _print_and_exit(
-    func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
-    code: An[int, Doc("The status code to exit with.")] = 0,
-) -> Callable[[], None]:
-    """Argument action callable to print something and exit immediately."""
-
-    @wraps(func)
-    def _inner() -> None:
-        raise cappa.Exit(func() or "", code=code)
-
-    return _inner
-
-
-# DUE: EOL 3.9: Remove block.
-def _load_config(file: Path | None = None) -> Config:
-    if CommandMain._CONFIG is None:
-        CommandMain._CONFIG = Config.from_file(file) if file else Config.from_default_locations()
-    return CommandMain._CONFIG
-
-
 @cappa.command(
     name=_NAME,
     help="Manage legacy code in your code base with YORE comments.",
@@ -445,36 +413,32 @@ def _load_config(file: Path | None = None) -> Config:
         """,
     ),
 )
-# DUE: EOL 3.9: Replace `**_dataclass_opts` with `kw_only=True` within line.
-@dataclass(**_dataclass_opts)
+@dataclass(kw_only=True)
 class CommandMain:
     """Command to manage legacy code in your code base with YORE comments."""
 
     subcommand: An[cappa.Subcommands[CommandCheck | CommandDiff | CommandFix], Doc("The selected subcommand.")]
 
-    # DUE: EOL 3.9: Replace `# ` with `` within block.
-    # @staticmethod
-    # def _load_config(file: Path | None = None) -> Config:
-    #     if CommandMain._CONFIG is None:
-    #         CommandMain._CONFIG = Config.from_file(file) if file else Config.from_default_locations()
-    #     return CommandMain._CONFIG
+    @staticmethod
+    def _load_config(file: Path | None = None) -> Config:
+        if CommandMain._CONFIG is None:
+            CommandMain._CONFIG = Config.from_file(file) if file else Config.from_default_locations()
+        return CommandMain._CONFIG
 
-    # DUE: EOL 3.9: Replace `# ` with `` within block.
-    # @staticmethod
-    # def _print_and_exit(
-    #     func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
-    #     code: An[int, Doc("The status code to exit with.")] = 0,
-    # ) -> Callable[[], None]:
-    #     """Argument action callable to print something and exit immediately."""
-    #
-    #     @wraps(func)
-    #     def _inner() -> None:
-    #         raise cappa.Exit(func() or "", code=code)
-    #
-    #     return _inner
+    @staticmethod
+    def _print_and_exit(
+        func: An[Callable[[], str | None], Doc("A function that returns or prints a string.")],
+        code: An[int, Doc("The status code to exit with.")] = 0,
+    ) -> Callable[[], None]:
+        """Argument action callable to print something and exit immediately."""
 
-    # DUE: EOL 3.9: Regex-replace `Config \| None = .*` with `ClassVar[Config | None] = None` within line.
-    _CONFIG: Config | None = field(default=None, init=False, repr=False)
+        @wraps(func)
+        def _inner() -> None:
+            raise cappa.Exit(func() or "", code=code)
+
+        return _inner
+
+    _CONFIG: ClassVar[Config | None] = None
 
     config: An[
         Config,
