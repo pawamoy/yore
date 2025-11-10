@@ -222,19 +222,29 @@ class YoreComment:
         """
         msg_location = f"{self.file}:{self.lineno}:"
         if self.is_eol:
-            if eol_within and _within(eol_within, self.eol):
-                delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+            try:
+                eol = self.eol
+            except KeyError:
+                # Unknown version, skip.
+                return True
+            if eol_within and _within(eol_within, eol):
+                delta = f"since {eol}" if _past(eol) else f"in ~{naturaldelta(_delta(eol))}"
                 _logger.warning(f"{msg_location} {delta} {self.comment}")
-            elif _within(TimeDelta(days=0), self.eol):
-                _logger.error(f"{msg_location} since {self.eol} {self.comment}")
+            elif _within(TimeDelta(days=0), eol):
+                _logger.error(f"{msg_location} since {eol} {self.comment}")
             else:
                 return True
         elif self.is_bol:
-            if bol_within and _within(bol_within, self.bol):
-                delta = f"since {self.bol}" if _past(self.bol) else f"in ~{naturaldelta(_delta(self.bol))}"
+            try:
+                bol = self.bol
+            except KeyError:
+                # Unknown version, skip.
+                return True
+            if bol_within and _within(bol_within, bol):
+                delta = f"since {bol}" if _past(bol) else f"in ~{naturaldelta(_delta(bol))}"
                 _logger.warning(f"{msg_location} {delta} {self.comment}")
-            elif _within(TimeDelta(days=0), self.bol):
-                _logger.error(f"{msg_location} since {self.bol} {self.comment}")
+            elif _within(TimeDelta(days=0), bol):
+                _logger.error(f"{msg_location} since {bol} {self.comment}")
             else:
                 return True
         elif self.is_bump and bump and Version(bump) >= Version(self.version):
