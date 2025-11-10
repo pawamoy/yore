@@ -28,7 +28,6 @@ if sys.version_info < (3, 9):
     from astunparse import unparse
 else:
     from ast import unparse
-
 ```
 
 Check your code base:
@@ -36,7 +35,6 @@ Check your code base:
 ```
 $ yore check --eol-within '5 months'
 ./src/griffe/agents/nodes/_values.py:11: Python 3.8 will reach its End of Life within approx. 4 months
-
 ```
 
 Fix your code base:
@@ -44,7 +42,6 @@ Fix your code base:
 ```
 $ yore fix --eol-within '5 months'
 fixed 1 comment in ./src/griffe/agents/nodes/_values.py
-
 ```
 
 ```
@@ -65,7 +62,6 @@ index 59bfacac..2f6eaa88 100644
 
  if TYPE_CHECKING:
      from pathlib import Path
-
 ```
 
 See the [usage documentation](https://pawamoy.github.io/yore/usage).
@@ -74,12 +70,12 @@ See the [usage documentation](https://pawamoy.github.io/yore/usage).
 
 ```
 pip install yore
-
 ```
 
 With [`uv`](https://docs.astral.sh/uv/):
 
 ```
 uv tool install yore
-
 ```
+
+## Sponsors

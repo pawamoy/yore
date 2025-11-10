@@ -39,7 +39,6 @@ Attributes:
 
 ```
 COMMENT_PATTERN: str = "\n    (?P<kind>bol|bump|eol)\\ (?P<version>[^:]+):\\ (?:\n        remove\\ (?P<remove>block|file|line)\n        |\n        replace\\ (?P<replace>block|file|line)\\ with\\ (?:\n            line\\ (?P<line>\\d+)\n            |\n            lines\\ (?P<lines>[\\d, -]+)\n            |\n            `(?P<string>.+?)`\n        )\n        |\n        (?P<regex>regex-)?replace\\ `(?P<pattern1>.+?)`\\ with\\ `(?P<pattern2>.*?)`\\ within\\ (?P<within>block|file|line)\n    )\n"
-
 ```
 
 The Yore comment pattern, as a regular expression.
@@ -59,7 +58,6 @@ COMMENT_PREFIXES: set[str] = {
     "\\{\\#-?\\ ",
     "\\(\\*\\ ",
 }
-
 ```
 
 The supported comment prefixes.
@@ -68,7 +66,6 @@ The supported comment prefixes.
 
 ```
 DEFAULT_EXCLUDE = ['.*', '__py*', 'build', 'dist']
-
 ```
 
 The default patterns to exclude when scanning directories.
@@ -77,7 +74,6 @@ The default patterns to exclude when scanning directories.
 
 ```
 DEFAULT_PREFIX = 'YORE'
-
 ```
 
 The default prefix for Yore comments.
@@ -86,7 +82,6 @@ The default prefix for Yore comments.
 
 ```
 Scope = Literal['block', 'file', 'line']
-
 ```
 
 The scope of a comment.
@@ -95,7 +90,6 @@ The scope of a comment.
 
 ```
 YoreKind = Literal['bump', 'eol', 'bol']
-
 ```
 
 The supported kinds of Yore comments.
@@ -104,7 +98,6 @@ The supported kinds of Yore comments.
 
 ```
 python_dates = _LazyPythonDates()
-
 ```
 
 A dictionary of Python versions and their Beginning/End of Life dates.
@@ -113,13 +106,13 @@ A dictionary of Python versions and their Beginning/End of Life dates.
 
 ```
 CommandCheck(
+    *,
     paths: list[Path] = list(),
     bump: str | None = None,
     eol_within: timedelta | None = None,
     bol_within: timedelta | None = None,
     prefix: str = DEFAULT_PREFIX,
 )
-
 ```
 
 Command to check Yore comments.
@@ -140,7 +133,6 @@ Attributes:
 
 ```
 bol_within: timedelta | None = None
-
 ```
 
 The time delta to start checking before the Beginning of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -149,7 +141,6 @@ The time delta to start checking before the Beginning of Life of a Python versio
 
 ```
 bump: str | None = None
-
 ```
 
 The next version of your project.
@@ -158,7 +149,6 @@ The next version of your project.
 
 ```
 eol_within: timedelta | None = None
-
 ```
 
 The time delta to start checking before the End of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -167,7 +157,6 @@ The time delta to start checking before the End of Life of a Python version. It 
 
 ```
 paths: list[Path] = field(default_factory=list)
-
 ```
 
 Path to files or directories to check.
@@ -176,7 +165,6 @@ Path to files or directories to check.
 
 ```
 prefix: str = DEFAULT_PREFIX
-
 ```
 
 The prefix for Yore comments.
@@ -185,7 +173,6 @@ The prefix for Yore comments.
 
 ```
 __call__() -> int
-
 ```
 
 Check Yore comments.
@@ -201,13 +188,13 @@ def __call__(self) -> int:
         for comment in yield_path_comments(path, prefix=self.prefix):
             ok &= comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
     return 0 if ok else 1
-
 ```
 
 ## CommandDiff
 
 ```
 CommandDiff(
+    *,
     paths: list[Path] = list(),
     bump: str | None = None,
     eol_within: timedelta | None = None,
@@ -215,7 +202,6 @@ CommandDiff(
     highlight: str | None = None,
     prefix: str = DEFAULT_PREFIX,
 )
-
 ```
 
 Command to diff Yore comments.
@@ -237,7 +223,6 @@ Attributes:
 
 ```
 bol_within: timedelta | None = None
-
 ```
 
 The time delta to start diffing before the Beginning of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -246,7 +231,6 @@ The time delta to start diffing before the Beginning of Life of a Python version
 
 ```
 bump: str | None = None
-
 ```
 
 The next version of your project.
@@ -255,7 +239,6 @@ The next version of your project.
 
 ```
 eol_within: timedelta | None = None
-
 ```
 
 The time delta to start diffing before the End of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -264,7 +247,6 @@ The time delta to start diffing before the End of Life of a Python version. It i
 
 ```
 highlight: str | None = None
-
 ```
 
 The command to highlight diffs.
@@ -273,7 +255,6 @@ The command to highlight diffs.
 
 ```
 paths: list[Path] = field(default_factory=list)
-
 ```
 
 Path to files or directories to diff.
@@ -282,7 +263,6 @@ Path to files or directories to diff.
 
 ```
 prefix: str = DEFAULT_PREFIX
-
 ```
 
 The prefix for Yore comments.
@@ -291,7 +271,6 @@ The prefix for Yore comments.
 
 ```
 __call__() -> int
-
 ```
 
 Diff Yore comments.
@@ -312,20 +291,19 @@ def __call__(self) -> int:
     for line in lines:
         print(line, end="")
     return 0
-
 ```
 
 ## CommandFix
 
 ```
 CommandFix(
+    *,
     paths: list[Path] = list(),
     bump: str | None = None,
     eol_within: timedelta | None = None,
     bol_within: timedelta | None = None,
     prefix: str = DEFAULT_PREFIX,
 )
-
 ```
 
 Command to fix Yore comments.
@@ -346,7 +324,6 @@ Attributes:
 
 ```
 bol_within: timedelta | None = None
-
 ```
 
 The time delta to start fixing before the Beginning of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -355,7 +332,6 @@ The time delta to start fixing before the Beginning of Life of a Python version.
 
 ```
 bump: str | None = None
-
 ```
 
 The next version of your project.
@@ -364,7 +340,6 @@ The next version of your project.
 
 ```
 eol_within: timedelta | None = None
-
 ```
 
 The time delta to start fixing before the End of Life of a Python version. It is provided in a human-readable format, like `2 weeks` or `1 month`. Spaces are optional, and the unit can be shortened to a single letter: `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -373,7 +348,6 @@ The time delta to start fixing before the End of Life of a Python version. It is
 
 ```
 paths: list[Path] = field(default_factory=list)
-
 ```
 
 Path to files or directories to fix.
@@ -382,7 +356,6 @@ Path to files or directories to fix.
 
 ```
 prefix: str = DEFAULT_PREFIX
-
 ```
 
 The prefix for Yore comments.
@@ -391,7 +364,6 @@ The prefix for Yore comments.
 
 ```
 __call__() -> int
-
 ```
 
 Fix Yore comments.
@@ -409,13 +381,13 @@ def __call__(self) -> int:
             for file in yield_files(path):
                 self._fix(file)
     return 0
-
 ```
 
 ## CommandMain
 
 ```
 CommandMain(
+    *,
     subcommand: Subcommands[
         CommandCheck | CommandDiff | CommandFix
     ],
@@ -423,7 +395,6 @@ CommandMain(
     version: bool = False,
     debug_info: bool = False,
 )
-
 ```
 
 Command to manage legacy code in your code base with YORE comments.
@@ -439,7 +410,6 @@ Attributes:
 
 ```
 config: Config = field(default_factory=_load_config)
-
 ```
 
 Path to the configuration file.
@@ -448,7 +418,6 @@ Path to the configuration file.
 
 ```
 debug_info: bool = False
-
 ```
 
 Print debug information.
@@ -459,7 +428,6 @@ Print debug information.
 subcommand: Subcommands[
     CommandCheck | CommandDiff | CommandFix
 ]
-
 ```
 
 The selected subcommand.
@@ -468,7 +436,6 @@ The selected subcommand.
 
 ```
 version: bool = False
-
 ```
 
 Version CLI option.
@@ -477,12 +444,12 @@ Version CLI option.
 
 ```
 Config(
+    *,
     prefix: list[str] | Unset = config_field("prefix"),
     diff_highlight: str | Unset = config_field(
         "diff.highlight"
     ),
 )
-
 ```
 
 Configuration for the insiders project.
@@ -503,7 +470,6 @@ Attributes:
 
 ```
 diff_highlight: str | Unset = config_field("diff.highlight")
-
 ```
 
 The command to highlight diffs.
@@ -512,7 +478,6 @@ The command to highlight diffs.
 
 ```
 prefix: list[str] | Unset = config_field('prefix')
-
 ```
 
 The prefix for Yore comments.
@@ -521,7 +486,6 @@ The prefix for Yore comments.
 
 ```
 from_data(data: Mapping[str, Any]) -> Config
-
 ```
 
 Load configuration from data.
@@ -571,14 +535,12 @@ def from_data(
             for field in fields(cls)
         },
     )
-
 ```
 
 ### from_default_locations
 
 ```
 from_default_locations() -> Config
-
 ```
 
 Load configuration from the default locations.
@@ -605,14 +567,12 @@ def from_default_locations(cls) -> An[Config, Doc("Loaded configuration.")]:
             break
         cwd = cwd.parent
     return cls()
-
 ```
 
 ### from_file
 
 ```
 from_file(path: str | Path) -> Config
-
 ```
 
 Load configuration from a file.
@@ -638,14 +598,12 @@ def from_file(
     """Load configuration from a file."""
     with open(path, "rb") as file:
         return cls.from_data(tomllib.load(file))
-
 ```
 
 ### from_pyproject
 
 ```
 from_pyproject(path: str | Path) -> Config
-
 ```
 
 Load configuration from pyproject.toml.
@@ -671,14 +629,12 @@ def from_pyproject(
     """Load configuration from pyproject.toml."""
     with open(path, "rb") as file:
         return cls.from_data(tomllib.load(file).get("tool", {}).get("yore", {}))
-
 ```
 
 ## Unset
 
 ```
 Unset(key: str, transform: str | None = None)
-
 ```
 
 A sentinel value for unset configuration options.
@@ -714,14 +670,12 @@ def __init__(
     self.key: An[str, Doc("TOML key.")] = key
     self.name: An[str, Doc("Transformed key name.")] = key.replace("-", "_").replace(".", "_")
     self.transform: An[str | None, Doc("Name of the method to call to transform the config value.")] = transform
-
 ```
 
 ### key
 
 ```
 key: str = key
-
 ```
 
 TOML key.
@@ -730,7 +684,6 @@ TOML key.
 
 ```
 name: str = replace('.', '_')
-
 ```
 
 Transformed key name.
@@ -739,7 +692,6 @@ Transformed key name.
 
 ```
 transform: str | None = transform
-
 ```
 
 Name of the method to call to transform the config value.
@@ -748,7 +700,6 @@ Name of the method to call to transform the config value.
 
 ```
 __bool__() -> bool
-
 ```
 
 An unset value always evaluates to False.
@@ -759,13 +710,13 @@ Source code in `src/yore/_internal/config.py`
 def __bool__(self) -> bool:
     """An unset value always evaluates to False."""
     return False
-
 ```
 
 ## YoreComment
 
 ```
 YoreComment(
+    *,
     file: Path,
     lineno: int,
     raw: str,
@@ -783,7 +734,6 @@ YoreComment(
     pattern2: str | None = None,
     within: Scope | None = None,
 )
-
 ```
 
 A Yore comment.
@@ -822,7 +772,6 @@ Attributes:
 
 ```
 bol: date
-
 ```
 
 The Beginning of Life date for the Python version.
@@ -831,7 +780,6 @@ The Beginning of Life date for the Python version.
 
 ```
 comment: str
-
 ```
 
 The comment without the prefix.
@@ -840,7 +788,6 @@ The comment without the prefix.
 
 ```
 eol: date
-
 ```
 
 The End of Life date for the Python version.
@@ -849,7 +796,6 @@ The End of Life date for the Python version.
 
 ```
 file: Path
-
 ```
 
 The file containing comment.
@@ -858,7 +804,6 @@ The file containing comment.
 
 ```
 is_bol: bool
-
 ```
 
 Whether the comment is an End of Life comment.
@@ -867,7 +812,6 @@ Whether the comment is an End of Life comment.
 
 ```
 is_bump: bool
-
 ```
 
 Whether the comment is a bump comment.
@@ -876,7 +820,6 @@ Whether the comment is a bump comment.
 
 ```
 is_eol: bool
-
 ```
 
 Whether the comment is an End of Life comment.
@@ -885,7 +828,6 @@ Whether the comment is an End of Life comment.
 
 ```
 kind: YoreKind
-
 ```
 
 The kind of comment.
@@ -894,7 +836,6 @@ The kind of comment.
 
 ```
 line: int | None = None
-
 ```
 
 The line to replace.
@@ -903,7 +844,6 @@ The line to replace.
 
 ```
 lineno: int
-
 ```
 
 The line number of the comment.
@@ -912,7 +852,6 @@ The line number of the comment.
 
 ```
 lines: list[int] | None = None
-
 ```
 
 The lines to replace.
@@ -921,7 +860,6 @@ The lines to replace.
 
 ```
 pattern1: str | None = None
-
 ```
 
 The pattern to replace.
@@ -930,7 +868,6 @@ The pattern to replace.
 
 ```
 pattern2: str | None = None
-
 ```
 
 The replacement pattern.
@@ -939,7 +876,6 @@ The replacement pattern.
 
 ```
 prefix: str
-
 ```
 
 The prefix of the comment.
@@ -948,7 +884,6 @@ The prefix of the comment.
 
 ```
 raw: str
-
 ```
 
 The raw comment.
@@ -957,7 +892,6 @@ The raw comment.
 
 ```
 regex: bool = False
-
 ```
 
 Whether to use regex for replacement.
@@ -966,7 +900,6 @@ Whether to use regex for replacement.
 
 ```
 remove: Scope | None = None
-
 ```
 
 The removal scope.
@@ -975,7 +908,6 @@ The removal scope.
 
 ```
 replace: Scope | None = None
-
 ```
 
 The replacement scope.
@@ -984,7 +916,6 @@ The replacement scope.
 
 ```
 string: str | None = None
-
 ```
 
 The string to replace.
@@ -993,7 +924,6 @@ The string to replace.
 
 ```
 suffix: str
-
 ```
 
 The suffix of the comment.
@@ -1002,7 +932,6 @@ The suffix of the comment.
 
 ```
 version: str
-
 ```
 
 The EOL/bump version.
@@ -1011,7 +940,6 @@ The EOL/bump version.
 
 ```
 within: Scope | None = None
-
 ```
 
 The scope to replace within.
@@ -1025,7 +953,6 @@ check(
     eol_within: timedelta | None = None,
     bol_within: timedelta | None = None,
 ) -> bool
-
 ```
 
 Check the comment.
@@ -1070,19 +997,29 @@ def check(
     """
     msg_location = f"{self.file}:{self.lineno}:"
     if self.is_eol:
-        if eol_within and _within(eol_within, self.eol):
-            delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+        try:
+            eol = self.eol
+        except KeyError:
+            # Unknown version, skip.
+            return True
+        if eol_within and _within(eol_within, eol):
+            delta = f"since {eol}" if _past(eol) else f"in ~{naturaldelta(_delta(eol))}"
             _logger.warning(f"{msg_location} {delta} {self.comment}")
-        elif _within(TimeDelta(days=0), self.eol):
-            _logger.error(f"{msg_location} since {self.eol} {self.comment}")
+        elif _within(TimeDelta(days=0), eol):
+            _logger.error(f"{msg_location} since {eol} {self.comment}")
         else:
             return True
     elif self.is_bol:
-        if bol_within and _within(bol_within, self.bol):
-            delta = f"since {self.eol}" if _past(self.eol) else f"in ~{naturaldelta(_delta(self.eol))}"
+        try:
+            bol = self.bol
+        except KeyError:
+            # Unknown version, skip.
+            return True
+        if bol_within and _within(bol_within, bol):
+            delta = f"since {bol}" if _past(bol) else f"in ~{naturaldelta(_delta(bol))}"
             _logger.warning(f"{msg_location} {delta} {self.comment}")
-        elif _within(TimeDelta(days=0), self.bol):
-            _logger.error(f"{msg_location} since {self.bol} {self.comment}")
+        elif _within(TimeDelta(days=0), bol):
+            _logger.error(f"{msg_location} since {bol} {self.comment}")
         else:
             return True
     elif self.is_bump and bump and Version(bump) >= Version(self.version):
@@ -1090,7 +1027,6 @@ def check(
     else:
         return True
     return False
-
 ```
 
 ### fix
@@ -1103,7 +1039,6 @@ fix(
     eol_within: timedelta | None = None,
     bol_within: timedelta | None = None,
 ) -> bool
-
 ```
 
 Fix the comment and code below it.
@@ -1153,7 +1088,7 @@ def fix(
         Whether the comment was fixed.
     """
     write = buffer is None
-    buffer = buffer or self.file.read_text().splitlines(keepends=True)
+    buffer = buffer or self.file.read_text(encoding="utf8").splitlines(keepends=True)
 
     # Check if the fix should be applied.
     if (
@@ -1204,7 +1139,6 @@ def fix(
 
         return True
     return False
-
 ```
 
 ## config_field
@@ -1213,7 +1147,6 @@ def fix(
 config_field(
     key: str, transform: str | None = None
 ) -> Unset
-
 ```
 
 Create a dataclass field with a TOML key.
@@ -1241,14 +1174,12 @@ def config_field(
 ) -> An[Unset, Doc("Configuration field.")]:
     """Create a dataclass field with a TOML key."""
     return dataclass_field(default=Unset(key, transform=transform))
-
 ```
 
 ## get_pattern
 
 ```
 get_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern
-
 ```
 
 Get the Yore comment pattern with a specific prefix.
@@ -1280,14 +1211,12 @@ def get_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
         _PATTERN_PREFIX.replace("PREFIX", prefix) + COMMENT_PATTERN + _PATTERN_SUFFIX,
         re.VERBOSE | re.IGNORECASE,
     )
-
 ```
 
 ## main
 
 ```
 main(args: list[str] | None = None) -> int
-
 ```
 
 Run the main program.
@@ -1341,7 +1270,6 @@ def main(
         )
     except cappa.Exit as exit:
         return int(1 if exit.code is None else exit.code)
-
 ```
 
 ## yield_buffer_comments
@@ -1353,7 +1281,6 @@ yield_buffer_comments(
     *,
     prefix: str = DEFAULT_PREFIX,
 ) -> Iterator[YoreComment]
-
 ```
 
 Yield all Yore comments in a buffer.
@@ -1398,7 +1325,6 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
                 yield _match_to_comment(match, file, lineno)
             else:
                 _logger.error(f"{file}:{lineno}: invalid Yore comment")
-
 ```
 
 ## yield_directory_comments
@@ -1407,7 +1333,6 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
 yield_directory_comments(
     directory: Path, *, prefix: str = DEFAULT_PREFIX
 ) -> Iterator[YoreComment]
-
 ```
 
 Yield all Yore comments in a directory.
@@ -1441,7 +1366,6 @@ def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -
     """
     for file in yield_files(directory):
         yield from yield_file_comments(file, prefix=prefix)
-
 ```
 
 ## yield_file_comments
@@ -1450,7 +1374,6 @@ def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -
 yield_file_comments(
     file: Path, *, prefix: str = DEFAULT_PREFIX
 ) -> Iterator[YoreComment]
-
 ```
 
 Yield all Yore comments in a file.
@@ -1483,11 +1406,10 @@ def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
         Yore comments.
     """
     try:
-        lines = file.read_text().splitlines()
+        lines = file.read_text(encoding="utf8").splitlines()
     except (OSError, UnicodeDecodeError):
         return
     yield from yield_buffer_comments(file, lines, prefix=prefix)
-
 ```
 
 ## yield_files
@@ -1496,7 +1418,6 @@ def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
 yield_files(
     directory: Path, exclude: list[str] | None = None
 ) -> Iterator[Path]
-
 ```
 
 Yield all files in a directory.
@@ -1525,7 +1446,6 @@ def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[P
     else:
         for filepath in git_files.strip("\0").split("\0"):
             yield directory / filepath
-
 ```
 
 ## yield_path_comments
@@ -1534,7 +1454,6 @@ def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[P
 yield_path_comments(
     path: Path, *, prefix: str = DEFAULT_PREFIX
 ) -> Iterator[YoreComment]
-
 ```
 
 Yield all Yore comments in a file or directory.
@@ -1570,5 +1489,4 @@ def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
         yield from yield_directory_comments(path, prefix=prefix)
     else:
         yield from yield_file_comments(path, prefix=prefix)
-
 ```
