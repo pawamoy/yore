@@ -81,14 +81,19 @@ markdown_extensions:
 - admonition
 - callouts
 - footnotes
+- tables
 - pymdownx.emoji:
     emoji_index: !!python/name:material.extensions.emoji.twemoji
     emoji_generator: !!python/name:material.extensions.emoji.to_svg
 - pymdownx.magiclink
 - pymdownx.snippets:
-    base_path: [!relative $config_dir]
     check_paths: true
-- pymdownx.superfences
+- pymdownx.superfences:
+    custom_fences:
+    - name: python
+      class: python
+      validator: !!python/name:markdown_exec.validator
+      format: !!python/name:markdown_exec.formatter
 - pymdownx.tabbed:
     alternate_style: true
     slugify: !!python/object/apply:pymdownx.slugs.slugify
@@ -102,7 +107,6 @@ markdown_extensions:
 plugins:
 - search
 - autorefs
-- markdown-exec
 - section-index
 - coverage
 - mkdocstrings:
