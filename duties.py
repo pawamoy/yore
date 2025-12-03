@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -113,7 +114,16 @@ def docs(ctx: Context, *cli_args: str, host: str = "127.0.0.1", port: int = 8000
 def docs_deploy(ctx: Context) -> None:
     """Deploy the documentation to GitHub pages."""
     os.environ["DEPLOY"] = "true"
-    ctx.run(tools.mkdocs.gh_deploy(force=True), title="Deploying documentation")
+    ctx.run([sys.executable, "-m", "zensical", "build"], title="Building documentation")
+    shutil.rmtree("/tmp/site-yore", ignore_errors=True)
+    shutil.copytree("site", "/tmp/site-yore", dirs_exist_ok=False)
+    ctx.run("git switch gh-pages", title="Switching to gh-pages branch", pty=PTY)
+    ctx.run("rm -rf ./*", title="Clearing old files", pty=PTY)
+    shutil.copytree("/tmp/site-yore", ".", dirs_exist_ok=True)
+    ctx.run("git add . -A", title="Staging new files", pty=PTY)
+    ctx.run(['git', 'commit', '-m', 'chore: Update documentation'], title="Committing changes", pty=PTY)
+    ctx.run("git push", title="Pushing documentation", pty=PTY)
+    ctx.run("git switch -", title="Switching back to previous branch", pty=PTY)
 
 
 @duty
