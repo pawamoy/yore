@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.7](https://github.com/pawamoy/yore/releases/tag/0.4.7) - 2026-01-13
+
+<small>[Compare with 0.4.6](https://github.com/pawamoy/yore/compare/0.4.6...0.4.7)</small>
+
+### Code Refactoring
+
+- Update release-cycle.json URL ([a02eed4](https://github.com/pawamoy/yore/commit/a02eed44544b8bae01c9c146dd9bbf92538dd08f) by Hugo van Kemenade). [PR-16](https://github.com/pawamoy/yore/pull/16)
+
 ## [0.4.6](https://github.com/pawamoy/yore/releases/tag/0.4.6) - 2025-11-10
 
 <small>[Compare with 0.4.5](https://github.com/pawamoy/yore/compare/0.4.5...0.4.6)</small>
