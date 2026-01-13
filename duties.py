@@ -115,13 +115,13 @@ def docs_deploy(ctx: Context) -> None:
     """Deploy the documentation to GitHub pages."""
     os.environ["DEPLOY"] = "true"
     ctx.run([sys.executable, "-m", "zensical", "build"], title="Building documentation")
-    shutil.rmtree("/tmp/site-yore", ignore_errors=True)
-    shutil.copytree("site", "/tmp/site-yore", dirs_exist_ok=False)
+    shutil.rmtree("/tmp/site-yore", ignore_errors=True)  # noqa: S108
+    shutil.copytree("site", "/tmp/site-yore", dirs_exist_ok=False)  # noqa: S108
     ctx.run("git switch gh-pages", title="Switching to gh-pages branch", pty=PTY)
     ctx.run("rm -rf ./*", title="Clearing old files", pty=PTY)
-    shutil.copytree("/tmp/site-yore", ".", dirs_exist_ok=True)
+    shutil.copytree("/tmp/site-yore", ".", dirs_exist_ok=True)  # noqa: S108
     ctx.run("git add . -A", title="Staging new files", pty=PTY)
-    ctx.run(['git', 'commit', '-m', 'chore: Update documentation'], title="Committing changes", pty=PTY)
+    ctx.run(["git", "commit", "-m", "chore: Update documentation"], title="Committing changes", pty=PTY)
     ctx.run("git push", title="Pushing documentation", pty=PTY)
     ctx.run("git switch -", title="Switching back to previous branch", pty=PTY)
 
