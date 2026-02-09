@@ -1,3 +1,8 @@
+---
+hide:
+- navigation
+---
+
 # Usage
 
 Yore lets you write `# YORE` comments in your code base to mark some lines of blocks of code as being legacy code: only there to support "old" versions of Python, or for backward compatibility with previous versions of your own project.

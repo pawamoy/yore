@@ -15,6 +15,7 @@ nav = [
     { "Credits" = "credits.md" },
     { "License" = "license.md" },
   ] },
+  { "Usage" = "usage.md" },
   { "API reference" = "reference/api.md" },
   { "Development" = [
     { "Contributing" = "contributing.md" },
