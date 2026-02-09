@@ -118,7 +118,7 @@ class Config:
         path: An[str | Path, Doc("Path to the configuration file.")],
     ) -> An[Config, Doc("Loaded configuration.")]:
         """Load configuration from a file."""
-        with open(path, "rb") as file:
+        with open(path, "rb") as file:  # noqa: PTH123
             return cls.from_data(tomllib.load(file))
 
     @classmethod
@@ -127,7 +127,7 @@ class Config:
         path: An[str | Path, Doc("Path to the pyproject.toml file.")],
     ) -> An[Config, Doc("Loaded configuration.")]:
         """Load configuration from pyproject.toml."""
-        with open(path, "rb") as file:
+        with open(path, "rb") as file:  # noqa: PTH123
             return cls.from_data(tomllib.load(file).get("tool", {}).get("yore", {}))
 
     @classmethod

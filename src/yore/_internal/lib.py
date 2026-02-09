@@ -304,7 +304,7 @@ class YoreComment:
                 start, end = _scope_range(self.within, buffer, start)
                 block = buffer[start:end]
                 if self.regex:
-                    pattern1: Pattern = re.compile(self.pattern1)
+                    pattern1: Pattern = re.compile(self.pattern1)  # ty: ignore[no-matching-overload]
                     replacement = [pattern1.sub(self.pattern2, line) for line in block]
                 else:
                     replacement = [line.replace(self.pattern1, self.pattern2) for line in block]  # type: ignore[arg-type]

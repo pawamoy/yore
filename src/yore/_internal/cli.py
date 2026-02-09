@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
 from difflib import unified_diff
@@ -32,7 +31,7 @@ from yore._internal.config import Config, Unset
 from yore._internal.lib import DEFAULT_PREFIX, yield_buffer_comments, yield_files, yield_path_comments
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
 
 _NAME = "yore"
@@ -118,7 +117,7 @@ class CommandCheck:
             short="-p",
             long=True,
             num_args=1,
-            default=_FromConfig(Config.prefix),
+            default=_FromConfig(Config.prefix),  # ty: ignore[invalid-argument-type]
             show_default=f"{Config.prefix} or `{DEFAULT_PREFIX}`",
         ),
         Doc("""The prefix for Yore comments."""),
@@ -192,7 +191,7 @@ class CommandDiff:
             short="-H",
             long="--highlight",
             num_args=1,
-            default=_FromConfig(Config.diff_highlight),
+            default=_FromConfig(Config.diff_highlight),  # ty: ignore[invalid-argument-type]
             show_default=f"{Config.diff_highlight}",
         ),
         Doc("The command to highlight diffs."),
@@ -204,7 +203,7 @@ class CommandDiff:
             short="-p",
             long=True,
             num_args=1,
-            default=_FromConfig(Config.prefix),
+            default=_FromConfig(Config.prefix),  # ty: ignore[invalid-argument-type]
             show_default=f"{Config.prefix} or `{DEFAULT_PREFIX}`",
         ),
         Doc("""The prefix for Yore comments."""),
@@ -314,7 +313,7 @@ class CommandFix:
             short="-p",
             long=True,
             num_args=1,
-            default=_FromConfig(Config.prefix),
+            default=_FromConfig(Config.prefix),  # ty: ignore[invalid-argument-type]
             show_default=f"{Config.prefix}",
         ),
         Doc("""The prefix for Yore comments."""),
