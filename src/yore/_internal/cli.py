@@ -14,13 +14,14 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
 from difflib import unified_diff
 from functools import wraps
 from inspect import cleandoc
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 from typing import Annotated as An
 
 import cappa
@@ -126,7 +127,7 @@ class CommandCheck:
     def __call__(self) -> int:
         """Check Yore comments."""
         ok = True
-        paths = self.paths or [Path(".")]
+        paths = self.paths or [Path()]
         for path in paths:
             for comment in yield_path_comments(path, prefix=self.prefix):
                 ok &= comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
@@ -243,7 +244,7 @@ class CommandDiff:
 
     def __call__(self) -> int:
         """Diff Yore comments."""
-        lines = self._diff_paths(self.paths or [Path(".")])
+        lines = self._diff_paths(self.paths or [Path()])
         if self.highlight:
             process = subprocess.Popen(self.highlight, shell=True, text=True, stdin=subprocess.PIPE)  # noqa: S602
             for line in lines:
@@ -345,7 +346,7 @@ class CommandFix:
 
     def __call__(self) -> int:
         """Fix Yore comments."""
-        paths = self.paths or [Path(".")]
+        paths = self.paths or [Path()]
         for path in paths:
             if path.is_file():
                 self._fix(path)
