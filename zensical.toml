@@ -166,6 +166,7 @@ inventories = ["https://docs.python.org/3/objects.inv"]
 backlinks = "tree"
 docstring_options = { "ignore_init_summary" = true }
 docstring_section_style = "list"
+extensions = ["griffe_typingdoc"]
 filters = "public"
 heading_level = 1
 inherited_members = true
