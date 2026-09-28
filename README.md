@@ -64,6 +64,15 @@ temporary_patch_compatibility();
 
 Yore reads Radicle objects from local storage with `rad cob show --format json`. Install `rad` and seed the referenced repository locally before checking its issues or patches. No HTTP server is needed.
 
+Yore also supports GitLab issues and merge requests (`GLI`/`GLM`). Each compact tag has a readable form, such as `gitlab merge request`. You can configure the service URL for a hosted or self-hosted instance:
+
+```python
+# YORE: GitLab merge request group/project!123: Remove block.
+temporary_gitlab_workaround()
+```
+
+See the [usage guide](https://pawamoy.github.io/yore/usage/#other-work-item-services) for reference forms, completion rules, credentials, and configuration.
+
 Check your code base:
 
 ```console

@@ -24,23 +24,32 @@ import re
 import subprocess
 from dataclasses import dataclass
 from functools import cache
-from typing import TYPE_CHECKING
-from urllib.parse import urlsplit
+from typing import TYPE_CHECKING, Literal
+from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-_ServiceKind = str
+_ServiceKind = Literal["gli", "glm"]
 
-_SERVICE_KINDS: frozenset[str] = frozenset()
+_SERVICE_KINDS: frozenset[str] = frozenset(
+    {
+        "gli",
+        "glm",
+    },
+)
 """Yore kinds handled by this module."""
 
-DEFAULT_SERVICE_URLS: dict[str, str] = {}
+DEFAULT_SERVICE_URLS: dict[str, str] = {
+    "gitlab": "https://gitlab.com/api/v4",
+}
 """Default API roots for providers that have a canonical public service."""
 
-_SERVICE_ENV_URLS: dict[str, tuple[str, ...]] = {}
+_SERVICE_ENV_URLS: dict[str, tuple[str, ...]] = {
+    "gitlab": ("GITLAB_API_URL", "CI_API_V4_URL", "GITLAB_URL"),
+}
 
 _REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+\Z")
 _REPOSITORY_REFERENCE_PATTERN = re.compile(
@@ -51,6 +60,19 @@ _REPOSITORY_REFERENCE_PATTERN = re.compile(
     r")"
     r"(?P<number>[1-9]\d*)\Z",
 )
+_GITLAB_STATUS_QUERY = """
+query YoreWorkItemStatus($fullPath: ID!, $iid: String!) {
+  workspace: namespace(fullPath: $fullPath) {
+    workItem(iid: $iid) {
+      widgets {
+        ... on WorkItemWidgetStatus {
+          status { name category }
+        }
+      }
+    }
+  }
+}
+""".strip()
 
 
 @dataclass(frozen=True)
@@ -102,14 +124,22 @@ def _normalize_service_url(service: str, value: str) -> str:
         raise ValueError(f"Invalid {service} URL: {value}")
 
     path = parsed.path.rstrip("/")
-    suffixes: dict[str, str] = {}
+    suffixes = {
+        "gitlab": "/api/v4",
+    }
     if (suffix := suffixes.get(service)) and not path.endswith(suffix):
         url += suffix
     return url
 
 
-def _headers(_service: str) -> dict[str, str]:
-    return {"Accept": "application/json", "User-Agent": "yore"}
+def _headers(service: str) -> dict[str, str]:
+    headers = {"Accept": "application/json", "User-Agent": "yore"}
+    if service == "gitlab":
+        if token := os.environ.get("GITLAB_TOKEN") or os.environ.get("PRIVATE_TOKEN"):
+            headers["PRIVATE-TOKEN"] = token
+        elif token := os.environ.get("CI_JOB_TOKEN"):
+            headers["JOB-TOKEN"] = token
+    return headers
 
 
 def _request_json(
@@ -163,7 +193,9 @@ def _remote_path(remote: str) -> list[str]:
 
 
 def _default_repository(service: str, file: Path, *, nested: bool = False) -> str:
-    env_names: dict[str, tuple[str, ...]] = {}
+    env_names = {
+        "gitlab": ("CI_PROJECT_PATH",),
+    }
     for name in env_names[service]:
         if repository := os.environ.get(name):
             if not _REPOSITORY_PATTERN.fullmatch(repository):
@@ -188,10 +220,12 @@ def _parse_repository_reference(
 ) -> tuple[str, int]:
     if not (match := _REPOSITORY_REFERENCE_PATTERN.fullmatch(reference.strip())):
         expected = "NUMBER, #NUMBER, or REPOSITORY#NUMBER"
+        if service == "gitlab":
+            expected = "NUMBER, #NUMBER, !NUMBER, or REPOSITORY[#|!]NUMBER"
         raise ValueError(f"Invalid {service} reference {reference!r}; expected {expected}")
     marker = match.group("repository_marker") or match.group("short_marker")
-    if marker == "!":
-        raise ValueError(f"Invalid {service} reference {reference!r}; only # references are supported")
+    if marker == "!" and service != "gitlab":
+        raise ValueError(f"Invalid {service} reference {reference!r}; only GitLab uses ! references")
     repository = match.group("repository") or _default_repository(service, file, nested=nested)
     if not nested and repository.count("/") != 1:
         raise ValueError(f"Invalid {service} repository: {repository}")
@@ -228,17 +262,136 @@ def _label_completion(service: str, data: Mapping[str, object]) -> tuple[bool, s
     return False, "no completion status"
 
 
+def _gitlab_graphql_url(api_url: str) -> str:
+    return re.sub(r"/api/v4\Z", "/api/graphql", api_url)
+
+
+def _gitlab_status(repository: str, number: int, api_url: str) -> tuple[str, str] | None:
+    data = _request_json(
+        _gitlab_graphql_url(api_url),
+        headers=_headers("gitlab"),
+        body={
+            "query": _GITLAB_STATUS_QUERY,
+            "variables": {"fullPath": repository, "iid": str(number)},
+        },
+    )
+    root = data.get("data")
+    if not isinstance(root, dict):
+        return None
+    workspace = root.get("workspace")
+    if not isinstance(workspace, dict):
+        return None
+    work_item = workspace.get("workItem")
+    if not isinstance(work_item, dict):
+        return None
+    widgets = work_item.get("widgets")
+    if not isinstance(widgets, list):
+        return None
+    for widget in widgets:
+        if not isinstance(widget, dict):
+            continue
+        status = widget.get("status")
+        if not isinstance(status, dict):
+            continue
+        category = status.get("category")
+        name = status.get("name")
+        if isinstance(category, str) and isinstance(name, str):
+            return category.upper(), name
+    return None
+
+
+@cache
+def _fetch_gitlab_item(kind: Literal["gli", "glm"], repository: str, number: int, api_url: str) -> _WorkItem:
+    resource = "issues" if kind == "gli" else "merge_requests"
+    project = quote(repository, safe="")
+    data = _request_json(
+        f"{api_url}/projects/{project}/{resource}/{number}",
+        headers=_headers("gitlab"),
+    )
+    state = data.get("state")
+    if state not in {"opened", "closed", "merged", "locked"}:
+        raise ValueError(f"Unsupported GitLab {resource[:-1]} state {state!r} for {repository}#{number}")
+    marker = "#" if kind == "gli" else "!"
+    reference = f"{repository}{marker}{number}"
+    if kind == "glm":
+        return _WorkItem(
+            "GitLab",
+            "merge request",
+            reference,
+            closed=state in {"closed", "merged"},
+            completed=state == "merged" or data.get("merged_at") is not None,
+            completion="merged",
+            rejection="was closed without being merged",
+        )
+
+    if state != "closed":
+        return _WorkItem(
+            "GitLab",
+            "issue",
+            reference,
+            closed=False,
+            completed=False,
+        )
+    links = data.get("_links")
+    if isinstance(links, dict) and links.get("closed_as_duplicate_of"):
+        return _WorkItem(
+            "GitLab",
+            "issue",
+            reference,
+            closed=True,
+            completed=False,
+            rejection="was closed as duplicate, not completed",
+        )
+    if status := _gitlab_status(repository, number, api_url):
+        category, name = status
+        if category == "DONE":
+            return _WorkItem(
+                "GitLab",
+                "issue",
+                reference,
+                closed=True,
+                completed=True,
+            )
+        if category == "CANCELED":
+            return _WorkItem(
+                "GitLab",
+                "issue",
+                reference,
+                closed=True,
+                completed=False,
+                rejection=f"was closed as {name}, not completed",
+            )
+    completed, reason = _label_completion("gitlab", data)
+    return _WorkItem(
+        "GitLab",
+        "issue",
+        reference,
+        closed=True,
+        completed=completed,
+        rejection=f"was closed with {reason}, not completed",
+    )
+
+
 def _fetch_work_item(
     kind: _ServiceKind | str,
-    reference: str,  # noqa: ARG001
-    file: Path,  # noqa: ARG001
+    reference: str,
+    file: Path,
     *,
-    service_urls: Mapping[str, str] | None = None,  # noqa: ARG001
+    service_urls: Mapping[str, str] | None = None,
 ) -> _WorkItem:
     """Fetch and normalize a non-GitHub/Radicle work item."""
     normalized_kind = kind.casefold()
     if normalized_kind not in _SERVICE_KINDS:
         raise ValueError(f"Unsupported work-item kind: {kind}")
+
+    if normalized_kind in {"gli", "glm"}:
+        repository, number = _parse_repository_reference(reference, file, "gitlab", nested=True)
+        return _fetch_gitlab_item(
+            normalized_kind,
+            repository,
+            number,
+            _service_url("gitlab", service_urls),
+        )
 
     raise ValueError(f"Unsupported work-item kind: {kind}")
 
@@ -246,3 +399,4 @@ def _fetch_work_item(
 def _clear_work_item_caches() -> None:
     """Clear all provider and repository-inference caches."""
     _origin_remote.cache_clear()
+    _fetch_gitlab_item.cache_clear()

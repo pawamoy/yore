@@ -79,6 +79,7 @@ class Config:
 
     prefix: An[list[str] | Unset, Doc("The prefix for Yore comments.")] = config_field("prefix")  # noqa: RUF009
     diff_highlight: An[str | Unset, Doc("The command to highlight diffs.")] = config_field("diff.highlight")  # noqa: RUF009
+    gitlab_url: An[str | Unset, Doc("The GitLab instance or API URL.")] = config_field("gitlab.url")  # noqa: RUF009
 
     @classmethod
     def _get(

@@ -24,6 +24,8 @@ The syntax is as follows:
        | ghp <GITHUB-REFERENCE>
        | rdi <RADICLE-REFERENCE>
        | rdp <RADICLE-REFERENCE>
+       | gli <GITLAB-ISSUE-REFERENCE>
+       | glm <GITLAB-MERGE-REQUEST-REFERENCE>
 
 <ECOSYSTEM> = python | rust
 ```
@@ -59,6 +61,8 @@ The following table is exhaustive:
 | `GHP` | GitHub pull request | `gh pr`, `github pr`, `gh pull request`, `github pull request` |
 | `RDI` | Radicle issue | `rd issue`, `rad issue`, `radicle issue` |
 | `RDP` | Radicle patch | `rd patch`, `rad patch`, `radicle patch` |
+| `GLI` | GitLab issue | `gl issue`, `gitlab issue` |
+| `GLM` | GitLab merge request | `gl mr`, `gitlab mr`, `gl merge request`, `gitlab merge request` |
 
 For example, `GHI`, `gh issue`, and `GitHub Issue` select exactly the same
 trigger. Readable aliases are normalized to their compact kind internally and
@@ -98,6 +102,21 @@ Radicle references accept a full 40-hex issue or patch object ID, optionally pre
 For an ID-only reference, Yore first reads the conventional Git `rad` remote and then falls back to `rad inspect --rid`. A full object ID is required so the reference resolves consistently across nodes. `RDI` becomes actionable only for an issue whose state is `closed` with reason `solved`; a `closed`/`other` issue warns and remains untouched. `RDP` becomes actionable only for a `merged` patch; an `archived` patch warns and remains untouched. Open issues and open or draft patches are inactive.
 
 Yore runs `rad cob show --repo <RID> --type xyz.radicle.issue --object <OBJECT-ID> --format json` for issues. It uses `xyz.radicle.patch` as the type for patches. Install `rad` and seed each referenced repository in local Radicle storage first. Yore reads the state available in that storage and fetches each object once per process. Missing objects, CLI failures, decoding errors, and unexpected states propagate.
+
+### Other work-item services
+
+GitLab uses the same three-way policy: active work leaves the comment alone; fulfilled work makes `check` fail with an error and permits `diff`/`fix`; terminal work that did not fulfill the request makes `check` fail with a warning and is never edited. Yore requires an explicit success status or label before it edits code.
+
+| Tag | Reference forms | Fulfilled when | Warns when |
+| --- | --- | --- | --- |
+| `GLI` | `group[/subgroup]/project#N`, `#N`, `N` | Closed with a `DONE` work-item status, or a completion label | Closed as duplicate, with a `CANCELED` status/rejection label, or without a completion marker |
+| `GLM` | `group[/subgroup]/project!N`, `!N`, `#N`, `N` | Merged | Closed without merging |
+
+Short repository references use the provider's CI repository variable, then infer the repository from the Git `origin` remote. GitLab uses `CI_PROJECT_PATH`.
+
+For GitLab issues, the default completion labels are `yore:completed` and `yore/completed`. Default rejection labels are `yore:rejected`, `yore/rejected`, `wontfix`, `won't fix`, `duplicate`, and `invalid`. Override them with comma-separated `YORE_GITLAB_COMPLETED_LABELS` / `YORE_GITLAB_REJECTED_LABELS`. A rejection label wins if both kinds are present.
+
+Each resolved provider reference is fetched at most once per process. Requests have a three-second timeout. Connectivity, authentication, rate-limit, decoding, malformed-response, and unsupported-state errors propagate instead of being interpreted as active work.
 
 Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
 
@@ -321,6 +340,36 @@ Example commands:
 - `diff-so-fancy | less -RF`, see https://github.com/so-fancy/diff-so-fancy
 - `python -m rich.syntax -x diff -`, see https://rich.readthedocs.io/en/latest/syntax.html#syntax-cli
 - `vim -R -`
+
+### Work-item service URLs
+
+GitLab uses the same URL precedence. In the CLI, an explicit option overrides TOML; that resolved value overrides environment variables and then the public default. In Python, an entry in the `service_urls` mapping takes the place of the CLI/TOML value. An instance origin and the full API root are both accepted; Yore appends `/api/v4` where appropriate.
+
+| Service | TOML key | CLI option | URL environment variables | Default |
+| --- | --- | --- | --- | --- |
+| GitLab | `gitlab.url` | `--gitlab-url` | `GITLAB_API_URL`, `CI_API_V4_URL`, `GITLAB_URL` | `https://gitlab.com/api/v4` |
+
+For example, in `pyproject.toml`:
+
+```toml
+[tool.yore.gitlab]
+url = "https://gitlab.example.com"
+```
+
+Or in `yore.toml` / `config/yore.toml`:
+
+```toml
+[gitlab]
+url = "https://gitlab.example.com"
+```
+
+The adapters read credentials only from the environment:
+
+| Service | Credential environment variables |
+| --- | --- |
+| GitLab | `GITLAB_TOKEN` or `PRIVATE_TOKEN`; `CI_JOB_TOKEN` is the fallback |
+
+Service URLs must use HTTP or HTTPS and cannot contain embedded credentials, a query, or a fragment. Prefer HTTPS whenever credentials are sent. A configured URL is trusted: pairing a secret with a malicious URL can disclose that secret.
 
 ## Commands
 

@@ -958,6 +958,11 @@ def test_supported_comment_syntax(comment_syntax: str) -> None:
             "ghp",
             ("ghp", "gh pr", "github pr", "gh pull request", "github pull request"),
         ),
+        ("gli", ("gli", "gl issue", "gitlab issue")),
+        (
+            "glm",
+            ("glm", "gl mr", "gitlab mr", "gl merge request", "gitlab merge request"),
+        ),
         ("rdi", ("rdi", "rd issue", "rad issue", "radicle issue")),
         ("rdp", ("rdp", "rd patch", "rad patch", "radicle patch")),
     ],
@@ -1021,6 +1026,8 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
         "GHP #42: Remove line.",
         f"RDI {_RADICLE_OBJECT_ID}: Remove line.",
         f"RDP {_RADICLE_RID}#{_RADICLE_OBJECT_ID}: Remove line.",
+        "GLI group/project#42: Remove line.",
+        "GLM group/project!42: Remove line.",
     ],
 )
 def test_supported_comments(comment: str) -> None:

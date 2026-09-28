@@ -53,6 +53,8 @@ YoreKind = Literal[
     "eol",
     "ghi",
     "ghp",
+    "gli",
+    "glm",
     "rdi",
     "rdp",
 ]
@@ -64,6 +66,8 @@ _KIND_SPELLINGS: dict[YoreKind, tuple[str, ...]] = {
     "eol": ("eol",),
     "ghi": ("ghi", "gh issue", "github issue"),
     "ghp": ("ghp", "gh pr", "github pr", "gh pull request", "github pull request"),
+    "gli": ("gli", "gl issue", "gitlab issue"),
+    "glm": ("glm", "gl mr", "gitlab mr", "gl merge request", "gitlab merge request"),
     "rdi": ("rdi", "rd issue", "rad issue", "radicle issue"),
     "rdp": ("rdp", "rd patch", "rad patch", "radicle patch"),
 }

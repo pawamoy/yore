@@ -86,8 +86,21 @@ def _select_config(value: Any) -> Config:
 class _ServiceOptions:
     """Shared work-item service URL options."""
 
+    gitlab_url: An[
+        str | None,
+        cappa.Arg(
+            long=True,
+            value_name="URL",
+            default=_FromConfig(Config.gitlab_url),  # ty: ignore[invalid-argument-type]
+            show_default=f"{Config.gitlab_url}, GitLab environment, or GitLab.com",
+        ),
+        Doc("The GitLab instance or API URL."),
+    ] = None
+
     def _service_urls(self) -> dict[str, str]:
-        values: dict[str, str | None] = {}
+        values = {
+            "gitlab": self.gitlab_url,
+        }
         return {service: url for service, url in values.items() if url is not None}
 
 
@@ -423,6 +436,7 @@ class CommandFix(_ServiceOptions):
         It also accepts external work-item references:
         `GHI` and `GHP` (GitHub).
         `RDI` and `RDP` (Radicle).
+        `GLI` and `GLM` (GitLab).
 
         Work-item triggers accept case-insensitive compact tags and readable provider names.
 
@@ -440,6 +454,12 @@ class CommandFix(_ServiceOptions):
         infer the RID from the Git `rad` remote, then `rad inspect --rid`.
         Yore reads locally seeded COBs with `rad cob show`.
 
+
+        GitLab merge requests also accept `group/project!number` and `!number`.
+
+        Repository-backed work items accept an explicit repository and number
+        or a short `#number`/`number` form. Short references use CI metadata
+        and then the Git `origin` remote.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
@@ -474,6 +494,13 @@ class CommandFix(_ServiceOptions):
         ```python
         # YORE: GitHub issue pawamoy/yore#123: Remove line.
         legacy_issue_workaround()
+        ```
+
+        *Remove a workaround when a GitLab merge request is merged.*
+
+        ```python
+        # YORE: GitLab merge request group/project!123: Remove line.
+        legacy_merge_request_workaround()
         ```
 
         *Remove a workaround when a Radicle issue is solved.*
