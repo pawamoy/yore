@@ -236,6 +236,14 @@ def _match_to_kind(match: re.Match) -> YoreKind:
     return canonical
 
 
+def _match_to_within(match: re.Match) -> Scope | None:
+    if matched_within := match.group("within"):
+        return cast("Scope", matched_within)
+    if match.group("pattern1") is not None:
+        return "line"
+    return None
+
+
 def _match_to_comment(match: re.Match, file: Path, lineno: int, inferred: Versioned) -> YoreComment:
     line_ranges = _match_to_line_ranges(match)
     comment = YoreComment(
@@ -255,7 +263,7 @@ def _match_to_comment(match: re.Match, file: Path, lineno: int, inferred: Versio
         regex=bool(match.group("regex")),
         pattern1=match.group("pattern1"),
         pattern2=match.group("pattern2"),
-        within=match.group("within"),
+        within=_match_to_within(match),
     )
     comment._line_ranges = line_ranges
     return comment
@@ -586,7 +594,7 @@ class YoreComment:
     pattern2: str | None = None
     """The replacement pattern."""
     within: Scope | None = None
-    """The scope to replace within."""
+    """The scope to replace within, defaulting to line for text replacement."""
 
     @property
     def is_bol(self) -> bool:
@@ -851,15 +859,18 @@ class YoreComment:
                 replacement = _reindent(replacement, _indent(buffer[start]))
                 buffer[start:end] = replacement
 
-            elif self.within:
+            elif self.pattern1 is not None:
                 # Line numbers/ranges are relative to block starts, absolute for the "file" scope.
-                start, end = _scope_range(self.within, buffer, start)
+                start, end = _scope_range(self.within or "line", buffer, start)
                 block = buffer[start:end]
                 if self.regex:
-                    pattern1: Pattern = re.compile(self.pattern1)  # ty: ignore[no-matching-overload]
+                    pattern1: Pattern = re.compile(self.pattern1)
                     replacement = [pattern1.sub(self.pattern2, line) for line in block]
                 else:
-                    replacement = [line.replace(self.pattern1, self.pattern2) for line in block]  # ty: ignore[no-matching-overload]
+                    replacement = [
+                        line.replace(self.pattern1, self.pattern2)  # ty: ignore[no-matching-overload]
+                        for line in block
+                    ]
                 replacement = _reindent(replacement, _indent(buffer[start]))
                 buffer[start:end] = replacement
 
@@ -921,7 +932,7 @@ COMMENT_PATTERN: str = rf"""
             `(?P<string>.+?)`
         )
         |
-        (?P<regex>regex-)?replace\ `(?P<pattern1>.+?)`\ with\ `(?P<pattern2>.*?)`\ within\ (?P<within>block|file|line)
+        (?P<regex>regex-)?replace\ `(?P<pattern1>.+?)`\ with\ `(?P<pattern2>.*?)`(?:\ within\ (?P<within>block|file|line)\b)?(?!\ within\ )
     )
 """
 """The Yore comment pattern, as a regular expression."""

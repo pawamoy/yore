@@ -16,7 +16,7 @@ The syntax is as follows:
 <COMMENT> <PREFIX>: <WHEN>: replace <file|block|line> with line <LINENO>.
 <COMMENT> <PREFIX>: <WHEN>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
 <COMMENT> <PREFIX>: <WHEN>: replace <file|block|line> with `<STRING>`.
-<COMMENT> <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
+<COMMENT> <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` [within <file|block|line>].
 
 <WHEN> = bump <VERSION>
        | <eol|bol> [<ECOSYSTEM> ]<VERSION>
@@ -33,6 +33,8 @@ The syntax is as follows:
 ```
 
 Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional. Uppercase terms are placeholders that you should replace with actual values, while lowercase terms are keywords that you should use literally. Everything except placeholders is case-insensitive.
+
+For literal and regex text replacement, omitting `within <SCOPE>` defaults to `within line`. Use `within block` or `within file` to search a larger scope.
 
 `COMMENT` is comment syntax, depending on the source file. Yore supports the following syntax:
 
@@ -161,7 +163,7 @@ else:
 *Replace `lstrip` by `removeprefix` when Python 3.8 reaches its End of Life.*
 
 ```python
-# YORE: EOL 3.8: Replace `lstrip` with `removeprefix` within line.
+# YORE: EOL 3.8: Replace `lstrip` with `removeprefix`.
 return [cpn.lstrip("_") for cpn in a.split(".")] == [cpn.lstrip("_") for cpn in b.split(".")]
 ```
 
@@ -206,7 +208,7 @@ if compatibility_required() {
 
 ```python
 def load_extensions(
-    # YORE: Bump 1.0.0: Replace ` | Sequence[LoadableExtension],` with `` within line.
+    # YORE: Bump 1.0.0: Replace ` | Sequence[LoadableExtension],` with ``.
     *exts: LoadableExtension | Sequence[LoadableExtension],
 ): ...
 ```

@@ -78,6 +78,8 @@ See the [usage guide](https://pawamoy.github.io/yore/usage/#other-work-item-serv
 
 Line ranges are inclusive and can omit either endpoint. `2-` selects line 2 through the end of a block or file. `-5` selects its start through line 5.
 
+Literal and regex replacements default to the next line when the `within` clause is omitted. Use `within block` or `within file` explicitly for wider replacements.
+
 Check your code base:
 
 ```console

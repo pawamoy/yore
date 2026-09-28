@@ -442,7 +442,7 @@ class CommandFix(_ServiceOptions):
         # <PREFIX>: <WHEN>: replace <block|line> with line <LINENO>.
         # <PREFIX>: <WHEN>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
         # <PREFIX>: <WHEN>: replace <block|line> with `<STRING>`.
-        # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
+        # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` [within <file|block|line>].
 
         `<WHEN>` is `bump <VERSION>`, `<eol|bol> [<ECOSYSTEM> ]<VERSION>`, or
         an external work-item reference. Supported work-item tags are `GHI` and
@@ -471,6 +471,8 @@ class CommandFix(_ServiceOptions):
         Line references are one-based and ranges are inclusive. Either range
         endpoint can be omitted: `2-` means line 2 through the end of the
         selected scope, and `-5` means its start through line 5.
+        Text and regex replacement default to `within line` when their
+        `within <file|block|line>` suffix is omitted.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
@@ -524,7 +526,7 @@ class CommandFix(_ServiceOptions):
         *Replace `lstrip` by `removeprefix` when Python 3.8 reaches its End of Life.*
 
         ```python
-        # YORE: EOL 3.8: Replace `lstrip` with `removeprefix` within line.
+        # YORE: EOL 3.8: Replace `lstrip` with `removeprefix`.
         return [cpn.lstrip("_") for cpn in a.split(".")] == [cpn.lstrip("_") for cpn in b.split(".")]
         ```
 
@@ -532,7 +534,7 @@ class CommandFix(_ServiceOptions):
 
         ```python
         def load_extensions(
-            # YORE: Bump 1.0.0: Replace ` | Sequence[LoadableExtension],` with `` within line.
+            # YORE: Bump 1.0.0: Replace ` | Sequence[LoadableExtension],` with ``.
             *exts: LoadableExtension | Sequence[LoadableExtension],
         ): ...
         ```

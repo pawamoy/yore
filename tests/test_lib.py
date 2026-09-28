@@ -1059,6 +1059,85 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
 
 
 @pytest.mark.parametrize(
+    ("operator", "pattern", "replacement", "expected", "is_regex"),
+    [
+        ("Replace", "old", "new", "new 123\n", False),
+        ("Regex-replace", r"old \d+", "new", "new\n", True),
+    ],
+)
+def test_text_replacement_defaults_to_line(
+    operator: str,
+    pattern: str,
+    replacement: str,
+    expected: str,
+    *,
+    is_regex: bool,
+) -> None:
+    """Omitting `within SCOPE` applies text replacement to the next line."""
+    lines = [
+        f"# YORE: Bump 1: {operator} `{pattern}` with `{replacement}`.\n",
+        "old 123\n",
+        "old 456\n",
+    ]
+    parsed = next(lib.yield_buffer_comments(file=Path("test.py"), lines=lines))
+
+    assert parsed.within == "line"
+    assert parsed.regex is is_regex
+    assert parsed.fix(lines, bump="1")
+    assert lines == [expected, "old 456\n"]
+
+
+def test_explicit_text_replacement_scope_overrides_default() -> None:
+    """An explicit within-scope continues to control text replacement."""
+    lines = [
+        "# YORE: Bump 1: Replace `old` with `new` within block.\n",
+        "old 123\n",
+        "old 456\n",
+    ]
+    parsed = next(lib.yield_buffer_comments(file=Path("test.py"), lines=lines))
+
+    assert parsed.within == "block"
+    assert parsed.fix(lines, bump="1")
+    assert lines == ["new 123\n", "new 456\n"]
+
+
+def test_manual_text_replacement_defaults_to_line() -> None:
+    """Directly constructed text-replacement actions use the same default."""
+    lines = ["comment\n", "old 123\n", "old 456\n"]
+    comment = lib.YoreComment(
+        file=Path("test.py"),
+        lineno=1,
+        raw="comment",
+        prefix="",
+        suffix="",
+        kind="bump",
+        version="1",
+        pattern1="old",
+        pattern2="new",
+    )
+
+    assert comment.fix(lines, bump="1")
+    assert lines == ["new 123\n", "old 456\n"]
+
+
+@pytest.mark.parametrize("scope", ["blok", "blocky"])
+def test_invalid_optional_text_replacement_scope_is_not_treated_as_omitted(
+    caplog: pytest.LogCaptureFixture,
+    scope: str,
+) -> None:
+    """A misspelled explicit scope cannot silently fall back to line."""
+    comments = list(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=[f"# YORE: Bump 1: Replace `old` with `new` within {scope}.\n"],
+        ),
+    )
+
+    assert not comments
+    assert caplog.messages == ["test.py:1: invalid Yore comment"]
+
+
+@pytest.mark.parametrize(
     "comment",
     [
         "Bump 1: Remove line.",
@@ -1067,9 +1146,11 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
         "Bump 1: Replace `a` with `` within line.",
         "Bump 1: Replace `a` with `` within block.",
         "Bump 1: Replace `a` with `` within file.",
+        "Bump 1: Replace `a` with ``.",
         "Bump 1: Regex-replace `a` with `` within line.",
         "Bump 1: Regex-replace `a` with `` within block.",
         "Bump 1: Regex-replace `a` with `` within file.",
+        "Bump 1: Regex-replace `a` with ``.",
         "Bump 1: Replace block with line 2.",
         "Bump 1: Replace file with line 2.",
         "Bump 1: Replace block with lines 2-10.",
