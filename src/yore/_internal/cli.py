@@ -82,8 +82,9 @@ def _parse_timedelta(value: str) -> timedelta:
     help="Check Yore comments.",
     description=cleandoc(
         """
-        This command checks existing Yore comments in your code base
-        against Python End of Life dates or the provided next version of your project.
+        This command checks existing Yore comments in your code base against
+        supported ecosystem lifecycle dates or the
+        provided next version of your project.
         """,
     ),
 )
@@ -108,7 +109,7 @@ class CommandCheck:
         cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
-            The time delta to start checking before the End of Life of a Python version.
+            The time delta to start checking before the End of Life of an ecosystem version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -121,7 +122,7 @@ class CommandCheck:
         cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
-            The time delta to start checking before the Beginning of Life of a Python version.
+            The time delta to start checking before the Beginning of Life of an ecosystem version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -182,7 +183,7 @@ class CommandDiff:
         cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
-            The time delta to start diffing before the End of Life of a Python version.
+            The time delta to start diffing before the End of Life of an ecosystem version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -195,7 +196,7 @@ class CommandDiff:
         cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
-            The time delta to start diffing before the Beginning of Life of a Python version.
+            The time delta to start diffing before the Beginning of Life of an ecosystem version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -304,7 +305,7 @@ class CommandFix:
         cappa.Arg(short="-E", long="--eol/--eol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
-            The time delta to start fixing before the End of Life of a Python version.
+            The time delta to start fixing before the End of Life of an ecosystem version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -317,7 +318,7 @@ class CommandFix:
         cappa.Arg(short="-B", long="--bol/--bol-within", parse=_parse_timedelta, value_name="TIMEDELTA"),
         Doc(
             """
-            The time delta to start fixing before the Beginning of Life of a Python version.
+            The time delta to start fixing before the Beginning of Life of an ecosystem version.
             It is provided in a human-readable format, like `2 weeks` or `1 month`.
             Spaces are optional, and the unit can be shortened to a single letter:
             `d` for days, `w` for weeks, `m` for months, and `y` for years.
@@ -386,11 +387,15 @@ class CommandFix:
         The syntax is as follows:
 
         ```python
-        # <PREFIX>: <eol|bump> <VERSION>: Remove <block|line>.
-        # <PREFIX>: <eol|bump> <VERSION>: replace <block|line> with line <LINENO>.
-        # <PREFIX>: <eol|bump> <VERSION>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-        # <PREFIX>: <eol|bump> <VERSION>: replace <block|line> with `<STRING>`.
-        # <PREFIX>: <eol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
+        # <PREFIX>: <WHEN>: Remove <block|line>.
+        # <PREFIX>: <WHEN>: replace <block|line> with line <LINENO>.
+        # <PREFIX>: <WHEN>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+        # <PREFIX>: <WHEN>: replace <block|line> with `<STRING>`.
+        # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
+
+        `<WHEN>` is `bump <VERSION>` or `<eol|bol> [<ECOSYSTEM> ]<VERSION>`.
+
+        Python is the supported lifecycle ecosystem and the default qualifier.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.

@@ -29,7 +29,7 @@ from datetime import timedelta as TimeDelta  # noqa: N812
 from datetime import timezone as TimeZone  # noqa: N812
 from functools import cache
 from re import Pattern
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Literal, cast
 from urllib.request import urlopen
 
 from humanize import naturaldelta
@@ -39,8 +39,40 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-YoreKind = Literal["bump", "eol", "bol"]
+YoreKind = Literal[
+    "bol",
+    "bump",
+    "eol",
+]
 """The supported kinds of Yore comments."""
+
+_KIND_SPELLINGS: dict[YoreKind, tuple[str, ...]] = {
+    "bol": ("bol",),
+    "bump": ("bump",),
+    "eol": ("eol",),
+}
+"""Accepted case-insensitive spellings for each canonical Yore kind."""
+
+_KIND_ALIASES: dict[str, YoreKind] = {
+    spelling: kind for kind, spellings in _KIND_SPELLINGS.items() for spelling in spellings
+}
+
+
+Versioned = Literal["python"]
+"""The versioned projects supported by lifecycle comments."""
+
+_VERSIONED_ALIASES: dict[str, Versioned] = {
+    "python": "python",
+}
+
+_FILENAME_VERSIONED: dict[str, Versioned] = {}
+
+_EXTENSION_VERSIONED: dict[str, Versioned] = {
+    ".py": "python",
+    ".pyi": "python",
+    ".pyw": "python",
+    ".pyx": "python",
+}
 
 Scope = Literal["block", "file", "line"]
 """The scope of a comment."""
@@ -113,15 +145,41 @@ def _match_to_lines(match: re.Match) -> list[int] | None:
     return None
 
 
-def _match_to_comment(match: re.Match, file: Path, lineno: int) -> YoreComment:
+def _infer_versioned(file: Path) -> Versioned:
+    name = file.name.casefold()
+    if versioned := _FILENAME_VERSIONED.get(name):
+        return versioned
+    suffix = file.suffix.casefold()
+    return _EXTENSION_VERSIONED.get(suffix, "python")
+
+
+def _match_to_versioned(match: re.Match, inferred: Versioned) -> Versioned:
+    if matched_versioned := match.group("versioned"):
+        return _VERSIONED_ALIASES[matched_versioned.casefold()]
+    return inferred
+
+
+def _match_to_kind(match: re.Match) -> YoreKind:
+    spelling = match.group("kind")
+    canonical = _KIND_ALIASES[spelling.casefold()]
+    # Preserve the established spelling/capitalization behavior for compact
+    # tags. Readable aliases normalize to the canonical compact kind so the
+    # rest of the evaluator needs no alias-specific branches.
+    if spelling.casefold() == canonical:
+        return cast("YoreKind", spelling)
+    return canonical
+
+
+def _match_to_comment(match: re.Match, file: Path, lineno: int, inferred: Versioned) -> YoreComment:
     return YoreComment(
         file=file,
         lineno=lineno,
         raw=match.group(0),
         prefix=match.group("prefix"),
         suffix=match.group("suffix"),
-        kind=match.group("kind"),
+        kind=_match_to_kind(match),
         version=match.group("version"),
+        versioned=_match_to_versioned(match, inferred),
         remove=match.group("remove"),
         replace=match.group("replace"),
         line=_match_to_line(match),
@@ -163,7 +221,9 @@ class YoreComment:
     kind: YoreKind
     """The kind of comment."""
     version: str
-    """The EOL/bump version."""
+    """The lifecycle/bump version."""
+    versioned: Versioned = "python"
+    """The versioned project for BOL/EOL comments."""
     remove: Scope | None = None
     """The removal scope."""
     replace: Scope | None = None
@@ -200,13 +260,13 @@ class YoreComment:
 
     @property
     def bol(self) -> Date:
-        """The Beginning of Life date for the Python version."""
-        return python_dates[self.version][0]
+        """The Beginning of Life date for the versioned project."""
+        return lifecycle_dates[self.versioned][self.version][0]
 
     @property
-    def eol(self) -> Date:
-        """The End of Life date for the Python version."""
-        return python_dates[self.version][1]
+    def eol(self) -> Date | None:
+        """The End of Life date for the versioned project."""
+        return lifecycle_dates[self.versioned][self.version][1]
 
     @property
     def comment(self) -> str:
@@ -224,8 +284,8 @@ class YoreComment:
 
         Parameters:
             bump: The next version of the project.
-            eol_within: The time delta to start warning before the End of Life of a Python version.
-            bol_within: The time delta to start warning before the Beginning of Life of a Python version.
+            eol_within: The time delta to start warning before the End of Life of a versioned project.
+            bol_within: The time delta to start warning before the Beginning of Life of a versioned project.
 
         Returns:
             True when there is nothing to do, False otherwise.
@@ -236,6 +296,9 @@ class YoreComment:
                 eol = self.eol
             except KeyError:
                 # Unknown version, skip.
+                return True
+            if eol is None:
+                # No EOL date has been scheduled, skip.
                 return True
             if eol_within and _within(eol_within, eol):
                 delta = f"since {eol}" if _past(eol) else f"in ~{naturaldelta(_delta(eol))}"
@@ -276,8 +339,8 @@ class YoreComment:
         Parameters:
             buffer: The buffer to fix. If not provided, read from and write to the file.
             bump: The next version of the project.
-            eol_within: The time delta to start fixing before the End of Life of a Python version.
-            bol_within: The time delta to start fixing before the Beginning of Life of a Python version.
+            eol_within: The time delta to start fixing before the End of Life of a versioned project.
+            bol_within: The time delta to start fixing before the Beginning of Life of a versioned project.
 
         Returns:
             Whether the comment was fixed.
@@ -286,13 +349,26 @@ class YoreComment:
         buffer = buffer or self.file.read_text(encoding="utf8").splitlines(keepends=True)
 
         # Check if the fix should be applied.
-        if (
-            (self.is_eol and ((eol_within and _within(eol_within, self.eol)) or _within(TimeDelta(days=0), self.eol)))
-            or (
-                self.is_bol and ((bol_within and _within(bol_within, self.bol)) or _within(TimeDelta(days=0), self.bol))
-            )
-            or (self.is_bump and bump and Version(bump) >= Version(self.version))
-        ):
+        due = False
+        try:
+            if self.is_eol and (eol := self.eol) is not None:
+                due = (eol_within is not None and _within(eol_within, eol)) or _within(
+                    TimeDelta(),
+                    eol,
+                )
+            elif self.is_bol:
+                bol = self.bol
+                due = (bol_within is not None and _within(bol_within, bol)) or _within(
+                    TimeDelta(),
+                    bol,
+                )
+        except KeyError:
+            # Unknown version, skip.
+            pass
+        if not due and self.is_bump and bump:
+            due = Version(bump) >= Version(self.version)
+
+        if due:
             # Start at the commnent line, immediately remove it.
             start = self.lineno - 1
             del buffer[start]
@@ -352,9 +428,31 @@ COMMENT_PREFIXES: set[str] = {
 
 _PATTERN_PREFIX = rf"^(?P<prefix>\s*(?:{'|'.join(sorted(COMMENT_PREFIXES))})PREFIX:\ )"
 _PATTERN_SUFFIX = r"(?P<suffix>\.?.*)$"
+_VERSIONED_PATTERN = "|".join(re.escape(alias) for alias in sorted(_VERSIONED_ALIASES, key=len, reverse=True))
+_LIFECYCLE_KIND_PATTERN = "|".join(
+    re.escape(spelling)
+    for spelling in sorted(
+        (spelling for kind in ("bol", "eol") for spelling in _KIND_SPELLINGS[kind]),
+        key=len,
+        reverse=True,
+    )
+)
+_OTHER_KIND_PATTERN = "|".join(
+    re.escape(spelling)
+    for spelling in sorted(
+        (
+            spelling
+            for kind, spellings in _KIND_SPELLINGS.items()
+            if kind not in {"bol", "eol"}
+            for spelling in spellings
+        ),
+        key=len,
+        reverse=True,
+    )
+)
 
-COMMENT_PATTERN: str = r"""
-    (?P<kind>bol|bump|eol)\ (?P<version>[^:]+):\ (?:
+COMMENT_PATTERN: str = rf"""
+    (?P<kind>(?P<lifecycle>{_LIFECYCLE_KIND_PATTERN})|{_OTHER_KIND_PATTERN})\ (?(lifecycle)(?:(?P<versioned>{_VERSIONED_PATTERN})\ )?)(?P<version>.+?):\ (?:
         remove\ (?P<remove>block|file|line)
         |
         replace\ (?P<replace>block|file|line)\ with\ (?:
@@ -428,10 +526,11 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
     """
     prepattern = _get_prematching_pattern(prefix)
     pattern = get_pattern(prefix)
+    inferred = _infer_versioned(file)
     for lineno, line in enumerate(lines, 1):
         if prepattern.match(line):
             if match := pattern.match(line):
-                yield _match_to_comment(match, file, lineno)
+                yield _match_to_comment(match, file, lineno, inferred)
             else:
                 _logger.error(f"{file}:{lineno}: invalid Yore comment")
 
@@ -483,14 +582,26 @@ def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
         yield from yield_file_comments(path, prefix=prefix)
 
 
-class _LazyPythonDates:
-    EOL_DATA_URL = "https://peps.python.org/api/release-cycle.json"
-    _dates: ClassVar[dict[str, tuple[Date, Date]]] = {}
+_ReleaseDates = tuple[Date, Date | None]
 
-    def __getitem__(self, version: str) -> tuple[Date, Date]:
-        if not self._dates:
+
+class _LazyDates:
+    def __init__(self) -> None:
+        self._dates: dict[str, _ReleaseDates] = {}
+        self._fetched = False
+
+    def __getitem__(self, version: str) -> _ReleaseDates:
+        if not self._dates and not self._fetched:
             self._fetch()
+            self._fetched = True
         return self._dates[version]
+
+    def _fetch(self) -> None:
+        raise NotImplementedError
+
+
+class _LazyPythonDates(_LazyDates):
+    EOL_DATA_URL = "https://peps.python.org/api/release-cycle.json"
 
     @staticmethod
     def _to_date(date: str) -> Date:
@@ -510,11 +621,19 @@ class _LazyPythonDates:
 
     def _fetch(self) -> None:
         data = json.loads(urlopen(self.EOL_DATA_URL, timeout=3).read())  # noqa: S310
+        dates: dict[str, _ReleaseDates] = {}
         for version, info in data.items():
             bol_date = self._to_date(info["first_release"])
             eol_date = self._to_date(info["end_of_life"])
-            self._dates[version] = (bol_date, eol_date)
+            dates[version] = (bol_date, eol_date)
+        self._dates.update(dates)
 
 
 python_dates = _LazyPythonDates()
 """A dictionary of Python versions and their Beginning/End of Life dates."""
+
+
+lifecycle_dates: dict[Versioned, _LazyDates] = {
+    "python": python_dates,
+}
+"""The date providers for each supported versioned project."""

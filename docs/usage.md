@@ -5,18 +5,23 @@ hide:
 
 # Usage
 
-Yore lets you write `# YORE` comments in your code base to mark some lines of blocks of code as being legacy code: only there to support "old" versions of Python, or for backward compatibility with previous versions of your own project.
+Yore lets you write `# YORE` comments in your code base to mark lines or blocks of code as legacy code: only there to support older ecosystem versions, or backward compatibility with previous versions of your own project.
 
 ## Syntax
 
 The syntax is as follows:
 
 ```text
-<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: remove <file|block|line>.
-<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with line <LINENO>.
-<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: replace <file|block|line> with `<STRING>`.
-<COMMENT> <PREFIX>: <eol|bol|bump> <VERSION>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
+<COMMENT> <PREFIX>: <WHEN>: remove <file|block|line>.
+<COMMENT> <PREFIX>: <WHEN>: replace <file|block|line> with line <LINENO>.
+<COMMENT> <PREFIX>: <WHEN>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+<COMMENT> <PREFIX>: <WHEN>: replace <file|block|line> with `<STRING>`.
+<COMMENT> <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <file|block|line>.
+
+<WHEN> = bump <VERSION>
+       | <eol|bol> [<ECOSYSTEM> ]<VERSION>
+
+<ECOSYSTEM> = python
 ```
 
 Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional. Uppercase terms are placeholders that you should replace with actual values, while lowercase terms are keywords that you should use literally. Everything except placeholders is case-insensitive.
@@ -38,7 +43,30 @@ Trailing comments are not supported: comments must be preceded with spaces only.
 
 The default `PREFIX` is `YORE`. See [Configuration](#configuration).
 
-Terms `eol`, `bol` and `bump` mean "End of Life", "Beginning of Life" and "version bump", respectively.
+Trigger spellings are case-insensitive.
+The following table is exhaustive:
+
+| Compact tag | Meaning | Readable aliases |
+| --- | --- | --- |
+| `Bump` | Project version bump | — |
+| `BOL` | Beginning of ecosystem life | — |
+| `EOL` | End of ecosystem life | — |
+
+### Lifecycle triggers
+
+For `eol` and `bol`, you can name the ecosystem explicitly, for example `EOL Python 3.8`. An explicit qualifier overrides inference. Qualifiers are case-insensitive:
+
+| Ecosystem | Accepted qualifiers |
+| --- | --- |
+| Python | `python` |
+
+When you omit the qualifier, Yore uses the filename or extension:
+
+| Ecosystem | Inferred from |
+| --- | --- |
+| Python | `.py`, `.pyi`, `.pyw`, and `.pyx`; also the fallback for anything unrecognized |
+
+Python lifecycle dates come from the Python release-cycle data.
 
 Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
 
@@ -230,7 +258,7 @@ Example commands:
 
 ### `yore check`
 
-Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a "bump" comment, Yore will warn you. Similarly, if a Python version has reached its end of life, and Yore finds an "eol" comment for this version, it will warn you. If you want to be warned before the EOL (End of Life) date of a Python version, use the `-E`, `---eol`,`--eol-within` option. If you want to be warned before the BOL (Beginning of Life) date of a Python version, use the `-B`, `--bol`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
+Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a `bump` comment, Yore will report it. The same applies when an ecosystem lifecycle date has arrived. If you want to be warned before an EOL (End of Life) date, use the `-E`, `--eol`, `--eol-within` option. If you want to be warned before a BOL (Beginning of Life) date, use the `-B`, `--bol`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
 
 ```console
 % yore check --eol '8 months' --bump 2.0
@@ -291,7 +319,7 @@ Like `yore fix`, but in dry-run mode (don't actually write on disk), and print t
 
 ### `yore fix`
 
-Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace line or blocks of code, but only when a Python version has reached its End of Life date or when the provided upcoming project version is equal to or higher than the one specified in the comments. All comments that would not emit warnings will be left untouched.
+Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace lines or blocks of code, but only when an ecosystem lifecycle date has been reached, or the provided upcoming project version is equal to or higher than the one specified in the comments. Comments whose trigger is not fulfilled are left untouched.
 
 ```console
 % yore fix -f5m -b1
