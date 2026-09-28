@@ -422,6 +422,7 @@ class CommandFix(_ServiceOptions):
         `<WHEN>` is `bump <VERSION>` or `<eol|bol> [<ECOSYSTEM> ]<VERSION>`.
         It also accepts external work-item references:
         `GHI` and `GHP` (GitHub).
+        `RDI` and `RDP` (Radicle).
 
         Work-item triggers accept case-insensitive compact tags and readable provider names.
 
@@ -433,6 +434,12 @@ class CommandFix(_ServiceOptions):
         `number`. Short references use `GITHUB_REPOSITORY`, then the Git
         `origin` remote. Authentication uses `GH_TOKEN` or `GITHUB_TOKEN` when
         available.
+
+        Radicle references accept `rad:<RID>#<OBJECT-ID>` or `<OBJECT-ID>`.
+        An object ID is the full 40-hex issue or patch ID. Short references
+        infer the RID from the Git `rad` remote, then `rad inspect --rid`.
+        Yore reads locally seeded COBs with `rad cob show`.
+
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
@@ -467,6 +474,13 @@ class CommandFix(_ServiceOptions):
         ```python
         # YORE: GitHub issue pawamoy/yore#123: Remove line.
         legacy_issue_workaround()
+        ```
+
+        *Remove a workaround when a Radicle issue is solved.*
+
+        ```rust
+        // YORE: RDI 0123456789abcdef0123456789abcdef01234567: Remove line.
+        legacy_issue_workaround();
         ```
 
         *Replace `lstrip` by `removeprefix` when Python 3.8 reaches its End of Life.*

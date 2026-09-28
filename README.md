@@ -52,6 +52,18 @@ legacy_issue_workaround()
 temporary_pr_compatibility()
 ```
 
+Radicle issues (`RDI`) and patches (`RDP`) work the same way. An ID-only reference uses the current repository's `rad` remote; prefix it with a RID to name another repository:
+
+```rust
+// YORE: RDI 0123456789abcdef0123456789abcdef01234567: Remove line.
+legacy_issue_workaround();
+
+// YORE: RDP rad:z4TEkvLebGGXYE3pgxHGu1GGpUM94#89abcdef0123456789abcdef0123456789abcdef: Remove block.
+temporary_patch_compatibility();
+```
+
+Yore reads Radicle objects from local storage with `rad cob show --format json`. Install `rad` and seed the referenced repository locally before checking its issues or patches. No HTTP server is needed.
+
 Check your code base:
 
 ```console

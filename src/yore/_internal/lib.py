@@ -53,6 +53,8 @@ YoreKind = Literal[
     "eol",
     "ghi",
     "ghp",
+    "rdi",
+    "rdp",
 ]
 """The supported kinds of Yore comments."""
 
@@ -62,6 +64,8 @@ _KIND_SPELLINGS: dict[YoreKind, tuple[str, ...]] = {
     "eol": ("eol",),
     "ghi": ("ghi", "gh issue", "github issue"),
     "ghp": ("ghp", "gh pr", "github pr", "gh pull request", "github pull request"),
+    "rdi": ("rdi", "rd issue", "rad issue", "radicle issue"),
+    "rdp": ("rdp", "rd patch", "rad patch", "radicle patch"),
 }
 """Accepted case-insensitive spellings for each canonical Yore kind."""
 
@@ -70,6 +74,7 @@ _KIND_ALIASES: dict[str, YoreKind] = {
 }
 
 _GitHubKind = Literal["ghi", "ghp"]
+_RadicleKind = Literal["rdi", "rdp"]
 
 Versioned = Literal["python", "rust"]
 """The versioned projects supported by lifecycle comments."""
@@ -341,6 +346,157 @@ def _fetch_github_item(
     )
 
 
+_RADICLE_RID_PATTERN = re.compile(r"rad:z[1-9A-HJ-NP-Za-km-z]+\Z")
+_RADICLE_OBJECT_ID_PATTERN = r"[0-9A-Fa-f]{40}"
+_RADICLE_REFERENCE_PATTERN = re.compile(
+    rf"(?:(?P<repository>rad:z[1-9A-HJ-NP-Za-km-z]+)#)?"
+    rf"#?(?P<object_id>{_RADICLE_OBJECT_ID_PATTERN})\Z",
+)
+
+
+@dataclass(frozen=True)
+class _RadicleItem:
+    repository: str
+    object_id: str
+    closed: bool
+    completed: bool
+    reason: str | None = None
+
+    @property
+    def reference(self) -> str:
+        return f"{self.repository}#{self.object_id}"
+
+
+def _repository_from_radicle_remote(remote: str) -> str:
+    parsed = urlsplit(remote)
+    if parsed.scheme != "rad" or not parsed.netloc:
+        raise ValueError(
+            f"Cannot determine a Radicle repository from remote URL: {remote}",
+        )
+    repository = f"rad:{parsed.netloc}"
+    if not _RADICLE_RID_PATTERN.fullmatch(repository):
+        raise ValueError(f"Invalid Radicle repository from remote URL: {remote}")
+    return repository
+
+
+@cache
+def _repository_from_radicle_git(directory: str) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "rad"],  # noqa: S607
+            capture_output=True,
+            cwd=directory,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        pass
+    else:
+        if not result.returncode and result.stdout.strip():
+            return _repository_from_radicle_remote(result.stdout.strip())
+
+    try:
+        result = subprocess.run(
+            ["rad", "inspect", "--rid"],  # noqa: S607
+            capture_output=True,
+            cwd=directory,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        pass
+    else:
+        repository = result.stdout.strip()
+        if not result.returncode and _RADICLE_RID_PATTERN.fullmatch(repository):
+            return repository
+    raise ValueError(
+        "Cannot determine the Radicle repository: Git remote 'rad' and `rad inspect --rid` are unavailable",
+    )
+
+
+def _default_radicle_repository(file: Path) -> str:
+    directory = file.resolve().parent
+    while not directory.is_dir() and directory != directory.parent:
+        directory = directory.parent
+    return _repository_from_radicle_git(str(directory))
+
+
+def _parse_radicle_reference(reference: str, file: Path) -> tuple[str, str]:
+    if not (match := _RADICLE_REFERENCE_PATTERN.fullmatch(reference.strip())):
+        raise ValueError(
+            f"Invalid Radicle reference {reference!r}; expected OBJECT-ID or RADICLE-REPOSITORY#OBJECT-ID",
+        )
+    repository = match.group("repository") or _default_radicle_repository(file)
+    if not _RADICLE_RID_PATTERN.fullmatch(repository):
+        raise ValueError(f"Invalid Radicle repository: {repository}")
+    return repository, match.group("object_id").lower()
+
+
+@cache
+def _fetch_radicle_item(
+    kind: _RadicleKind,
+    repository: str,
+    object_id: str,
+) -> _RadicleItem:
+    noun = "issue" if kind == "rdi" else "patch"
+    result = subprocess.run(  # noqa: S603
+        [  # noqa: S607
+            "rad",
+            "cob",
+            "show",
+            "--repo",
+            repository,
+            "--type",
+            f"xyz.radicle.{noun}",
+            "--object",
+            object_id,
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=10,
+    )
+    data = json.loads(result.stdout)
+    if not isinstance(data, dict):
+        raise ValueError(  # noqa: TRY004
+            f"Invalid Radicle {noun} response for {repository}#{object_id}",
+        )
+    state = data.get("state")
+    if not isinstance(state, dict) or not isinstance(state.get("status"), str):
+        raise ValueError(  # noqa: TRY004
+            f"Invalid Radicle {noun} response for {repository}#{object_id}",
+        )
+
+    status = state["status"]
+    if kind == "rdi":
+        if status == "open":
+            return _RadicleItem(repository, object_id, closed=False, completed=False)
+        if status == "closed" and state.get("reason") in {"solved", "other"}:
+            reason = state["reason"]
+            return _RadicleItem(
+                repository,
+                object_id,
+                closed=True,
+                completed=reason == "solved",
+                reason=reason,
+            )
+    elif status in {"draft", "open"}:
+        return _RadicleItem(repository, object_id, closed=False, completed=False)
+    elif status in {"archived", "merged"}:
+        return _RadicleItem(
+            repository,
+            object_id,
+            closed=True,
+            completed=status == "merged",
+            reason=status,
+        )
+    raise ValueError(
+        f"Unsupported Radicle {noun} state {status!r} for {repository}#{object_id}",
+    )
+
+
 @dataclass(kw_only=True)
 class YoreComment:
     """A Yore comment."""
@@ -406,6 +562,16 @@ class YoreComment:
         return self.kind.lower() == "ghp"
 
     @property
+    def is_rdi(self) -> bool:
+        """Whether the comment is a Radicle issue comment."""
+        return self.kind.lower() == "rdi"
+
+    @property
+    def is_rdp(self) -> bool:
+        """Whether the comment is a Radicle patch comment."""
+        return self.kind.lower() == "rdp"
+
+    @property
     def is_service_item(self) -> bool:
         """Whether the comment targets another supported work-item service."""
         return self.kind.lower() in _SERVICE_KINDS
@@ -430,6 +596,11 @@ class YoreComment:
         repository, number = _parse_github_reference(self.version, self.file)
         api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
         return _fetch_github_item(kind, repository, number, api_url)
+
+    def _radicle_item(self) -> _RadicleItem:
+        kind: _RadicleKind = "rdi" if self.is_rdi else "rdp"
+        repository, object_id = _parse_radicle_reference(self.version, self.file)
+        return _fetch_radicle_item(kind, repository, object_id)
 
     def _service_item(self, service_urls: Mapping[str, str] | None = None) -> _WorkItem:
         return _fetch_work_item(
@@ -509,6 +680,27 @@ class YoreComment:
                     )
             else:
                 return True
+        elif self.is_rdi or self.is_rdp:
+            item = self._radicle_item()
+            if item.completed:
+                completed = "solved" if self.is_rdi else "merged"
+                noun = "issue" if self.is_rdi else "patch"
+                _logger.error(
+                    f"{msg_location} Radicle {noun} {item.reference} was {completed}: {self.comment}",
+                )
+            elif item.closed:
+                if self.is_rdi:
+                    _logger.warning(
+                        f"{msg_location} Radicle issue {item.reference} was closed as other, not solved: "
+                        f"{self.comment}",
+                    )
+                else:
+                    _logger.warning(
+                        f"{msg_location} Radicle patch {item.reference} was archived without being merged: "
+                        f"{self.comment}",
+                    )
+            else:
+                return True
         elif self.is_service_item:
             item = self._service_item(service_urls)
             if item.completed:
@@ -572,6 +764,8 @@ class YoreComment:
             due = Version(bump) >= Version(self.version)
         if not due and (self.is_ghi or self.is_ghp):
             due = self._github_item().completed
+        if not due and (self.is_rdi or self.is_rdp):
+            due = self._radicle_item().completed
         if not due and self.is_service_item:
             due = self._service_item(service_urls).completed
 

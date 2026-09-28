@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 from datetime import date, timedelta
 from pathlib import Path
+from subprocess import CalledProcessError, CompletedProcess
 from typing import TYPE_CHECKING
 
 import pytest
@@ -39,6 +40,10 @@ class _Response:
 
     def read(self) -> bytes:
         return json.dumps(self.data).encode()
+
+
+_RADICLE_RID = "rad:z4TEkvLebGGXYE3pgxHGu1GGpUM94"
+_RADICLE_OBJECT_ID = "0123456789abcdef0123456789abcdef01234567"
 
 
 @pytest.mark.parametrize(
@@ -492,6 +497,332 @@ def test_fix_github_comment(
     assert lines == ([] if expected else [f"# YORE: {kind} octocat/example#42: Remove line.\n", "legacy()\n"])
 
 
+@pytest.mark.parametrize(
+    "remote",
+    [
+        "rad://z4TEkvLebGGXYE3pgxHGu1GGpUM94",
+        "rad://z4TEkvLebGGXYE3pgxHGu1GGpUM94/z6MkkPv9fC13uHwdqd3V6sfL4YH7HUaA1",
+    ],
+)
+def test_repository_from_radicle_remote(remote: str) -> None:
+    """Radicle fetch and push remote URLs resolve to their repository ID."""
+    assert lib._repository_from_radicle_remote(remote) == _RADICLE_RID
+
+
+@pytest.mark.parametrize(
+    "remote",
+    ["https://seed.example/rad:z123.git", "rad://invalid0rid", "rad:"],
+)
+def test_invalid_radicle_remote(remote: str) -> None:
+    """Non-Radicle and malformed remotes cannot identify a repository."""
+    with pytest.raises(ValueError, match="Radicle repository"):
+        lib._repository_from_radicle_remote(remote)
+
+
+def test_repository_from_radicle_git_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The conventional Git remote is preferred for current-repository inference."""
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **kwargs: object) -> object:  # noqa: ARG001
+        calls.append(args)
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": f"rad://{_RADICLE_RID.removeprefix('rad:')}\n"},
+        )()
+
+    monkeypatch.setattr(lib.subprocess, "run", _run)
+    lib._repository_from_radicle_git.cache_clear()
+
+    assert lib._repository_from_radicle_git("/project") == _RADICLE_RID
+    assert calls == [["git", "remote", "get-url", "rad"]]
+
+
+def test_repository_from_radicle_inspect(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Radicle inspection is the fallback when the Git remote is unavailable."""
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **kwargs: object) -> object:  # noqa: ARG001
+        calls.append(args)
+        if args[0] == "git":
+            return type("Result", (), {"returncode": 2, "stdout": ""})()
+        return type("Result", (), {"returncode": 0, "stdout": f"{_RADICLE_RID}\n"})()
+
+    monkeypatch.setattr(lib.subprocess, "run", _run)
+    lib._repository_from_radicle_git.cache_clear()
+
+    assert lib._repository_from_radicle_git("/project") == _RADICLE_RID
+    assert calls == [["git", "remote", "get-url", "rad"], ["rad", "inspect", "--rid"]]
+
+
+def test_repository_from_radicle_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing Git and Radicle commands produce a domain-specific error."""
+
+    def _run(*_args: object, **_kwargs: object) -> object:
+        raise FileNotFoundError
+
+    monkeypatch.setattr(lib.subprocess, "run", _run)
+    lib._repository_from_radicle_git.cache_clear()
+    with pytest.raises(ValueError, match="Cannot determine the Radicle repository"):
+        lib._repository_from_radicle_git("/project")
+
+
+@pytest.mark.parametrize(
+    ("reference", "expected_repository"),
+    [
+        (f"{_RADICLE_RID}#{_RADICLE_OBJECT_ID}", _RADICLE_RID),
+        (_RADICLE_OBJECT_ID.upper(), _RADICLE_RID),
+        (f"#{_RADICLE_OBJECT_ID}", _RADICLE_RID),
+    ],
+)
+def test_parse_radicle_reference(
+    reference: str,
+    expected_repository: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Radicle references support explicit repositories and current-repository forms."""
+    monkeypatch.setattr(
+        lib,
+        "_repository_from_radicle_git",
+        lambda directory: _RADICLE_RID,
+    )
+    assert lib._parse_radicle_reference(reference, Path("test.py")) == (
+        expected_repository,
+        _RADICLE_OBJECT_ID,
+    )
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [
+        "",
+        "0123456",
+        f"rad:invalid0rid#{_RADICLE_OBJECT_ID}",
+        f"https://seed.example/{_RADICLE_RID}#{_RADICLE_OBJECT_ID}",
+        f"heartwood#{_RADICLE_OBJECT_ID}",
+    ],
+)
+def test_invalid_radicle_reference(reference: str) -> None:
+    """Invalid Radicle references fail before invoking the CLI."""
+    with pytest.raises(ValueError, match="Invalid Radicle reference"):
+        lib._parse_radicle_reference(reference, Path("test.py"))
+
+
+@pytest.mark.parametrize("kind", ["RDI", "RDP"])
+def test_parse_radicle_comment_with_explicit_rid(kind: str) -> None:
+    """The trigger separator remains unambiguous when a reference contains `rad:`."""
+    parsed = next(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=[f"# YORE: {kind} {_RADICLE_RID}#{_RADICLE_OBJECT_ID}: Remove line."],
+        ),
+    )
+    assert parsed.version == f"{_RADICLE_RID}#{_RADICLE_OBJECT_ID}"
+
+
+@pytest.mark.parametrize(
+    ("kind", "state", "expected"),
+    [
+        ("rdi", {"status": "open"}, (False, False, None)),
+        ("rdi", {"status": "closed", "reason": "solved"}, (True, True, "solved")),
+        ("rdi", {"status": "closed", "reason": "other"}, (True, False, "other")),
+        ("rdp", {"status": "draft"}, (False, False, None)),
+        ("rdp", {"status": "open"}, (False, False, None)),
+        ("rdp", {"status": "merged"}, (True, True, "merged")),
+        ("rdp", {"status": "archived"}, (True, False, "archived")),
+    ],
+)
+def test_fetch_radicle_item(
+    kind: lib._RadicleKind,
+    state: dict[str, str],
+    expected: tuple[bool, bool, str | None],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Local COB JSON maps to active, completed, and rejected states."""
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(args)
+        assert kwargs == {"capture_output": True, "text": True, "check": True, "timeout": 10}
+        return CompletedProcess(args, 0, json.dumps({"state": state}), "")
+
+    monkeypatch.setattr(lib.subprocess, "run", _run)
+    lib._fetch_radicle_item.cache_clear()
+
+    item = lib._fetch_radicle_item(kind, _RADICLE_RID, _RADICLE_OBJECT_ID)
+
+    noun = "issue" if kind == "rdi" else "patch"
+    assert calls == [
+        [
+            "rad",
+            "cob",
+            "show",
+            "--repo",
+            _RADICLE_RID,
+            "--type",
+            f"xyz.radicle.{noun}",
+            "--object",
+            _RADICLE_OBJECT_ID,
+            "--format",
+            "json",
+        ],
+    ]
+    assert (item.closed, item.completed, item.reason) == expected
+    assert lib._fetch_radicle_item(kind, _RADICLE_RID, _RADICLE_OBJECT_ID) is item
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("kind", "state"),
+    [
+        ("rdi", {}),
+        ("rdi", {"status": "closed", "reason": "unknown"}),
+        ("rdp", {"status": "unknown"}),
+    ],
+)
+def test_invalid_radicle_item_state(
+    kind: lib._RadicleKind,
+    state: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unexpected COB states fail before Yore can apply a fix."""
+    monkeypatch.setattr(
+        lib.subprocess,
+        "run",
+        lambda args, **kwargs: CompletedProcess(args, 0, json.dumps({"state": state}), ""),
+    )
+    lib._fetch_radicle_item.cache_clear()
+
+    with pytest.raises(ValueError, match="Radicle"):
+        lib._fetch_radicle_item(kind, _RADICLE_RID, _RADICLE_OBJECT_ID)
+
+
+def test_invalid_radicle_item_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-object COB response is rejected explicitly."""
+    monkeypatch.setattr(
+        lib.subprocess,
+        "run",
+        lambda args, **kwargs: CompletedProcess(args, 0, "[]", ""),
+    )
+    lib._fetch_radicle_item.cache_clear()
+
+    with pytest.raises(ValueError, match="Invalid Radicle issue response"):
+        lib._fetch_radicle_item("rdi", _RADICLE_RID, _RADICLE_OBJECT_ID)
+
+
+def test_radicle_cli_error_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A missing or inaccessible local COB cannot silently appear active."""
+    error = CalledProcessError(1, ["rad", "cob", "show"], stderr="object not found")
+
+    def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:  # noqa: ARG001
+        raise error
+
+    monkeypatch.setattr(lib.subprocess, "run", _run)
+    lib._fetch_radicle_item.cache_clear()
+
+    with pytest.raises(CalledProcessError):
+        lib._fetch_radicle_item("rdi", _RADICLE_RID, _RADICLE_OBJECT_ID)
+
+
+@pytest.mark.parametrize(
+    ("kind", "closed", "completed", "reason", "expected", "level", "message"),
+    [
+        ("RDI", False, False, None, True, None, None),
+        ("RDI", True, True, "solved", False, "ERROR", "Radicle issue"),
+        (
+            "RDI",
+            True,
+            False,
+            "other",
+            False,
+            "WARNING",
+            "was closed as other, not solved",
+        ),
+        ("RDP", False, False, None, True, None, None),
+        ("RDP", True, True, "merged", False, "ERROR", "Radicle patch"),
+        (
+            "RDP",
+            True,
+            False,
+            "archived",
+            False,
+            "WARNING",
+            "was archived without being merged",
+        ),
+    ],
+)
+def test_check_radicle_comment(
+    *,
+    kind: str,
+    closed: bool,
+    completed: bool,
+    reason: str | None,
+    expected: bool,
+    level: str | None,
+    message: str | None,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Checking Radicle comments distinguishes active, completed, and rejected work."""
+    item = lib._RadicleItem(_RADICLE_RID, _RADICLE_OBJECT_ID, closed, completed, reason)
+
+    def _fetch(
+        _kind: lib._RadicleKind,
+        _repository: str,
+        _object_id: str,
+    ) -> lib._RadicleItem:
+        return item
+
+    monkeypatch.setattr(lib, "_fetch_radicle_item", _fetch)
+    parsed = next(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=[f"# YORE: {kind} {_RADICLE_RID}#{_RADICLE_OBJECT_ID}: Remove line."],
+        ),
+    )
+
+    with caplog.at_level(0):
+        assert parsed.check() is expected
+    if level is None:
+        assert not caplog.records
+    else:
+        assert message is not None
+        assert caplog.records[-1].levelname == level
+        assert message in caplog.messages[-1]
+        assert f"{_RADICLE_RID}#{_RADICLE_OBJECT_ID}" in caplog.messages[-1]
+
+
+@pytest.mark.parametrize(
+    ("kind", "completed", "expected"),
+    [
+        ("RDI", True, True),
+        ("RDI", False, False),
+        ("RDP", True, True),
+        ("RDP", False, False),
+    ],
+)
+def test_fix_radicle_comment(
+    kind: str,
+    completed: bool,
+    expected: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only solved issues and merged patches activate transformations."""
+    item = lib._RadicleItem(
+        _RADICLE_RID,
+        _RADICLE_OBJECT_ID,
+        closed=True,
+        completed=completed,
+    )
+    monkeypatch.setattr(lib, "_fetch_radicle_item", lambda *args: item)
+    comment = f"# YORE: {kind} {_RADICLE_RID}#{_RADICLE_OBJECT_ID}: Remove line.\n"
+    lines = [comment, "legacy()\n"]
+    parsed = next(lib.yield_buffer_comments(file=Path("test.py"), lines=lines))
+
+    assert parsed.fix(lines) is expected
+    assert lines == ([] if expected else [comment, "legacy()\n"])
+
+
 def test_python_dates(monkeypatch: pytest.MonkeyPatch) -> None:
     """The Python adapter loads its dedicated release-cycle feed."""
 
@@ -627,6 +958,8 @@ def test_supported_comment_syntax(comment_syntax: str) -> None:
             "ghp",
             ("ghp", "gh pr", "github pr", "gh pull request", "github pull request"),
         ),
+        ("rdi", ("rdi", "rd issue", "rad issue", "radicle issue")),
+        ("rdp", ("rdp", "rd patch", "rad patch", "radicle patch")),
     ],
 )
 def test_kind_aliases(kind: lib.YoreKind, spellings: tuple[str, ...]) -> None:
@@ -686,6 +1019,8 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
         "EOL Rust 1.72: Remove line.",
         "GHI octocat/example#42: Remove line.",
         "GHP #42: Remove line.",
+        f"RDI {_RADICLE_OBJECT_ID}: Remove line.",
+        f"RDP {_RADICLE_RID}#{_RADICLE_OBJECT_ID}: Remove line.",
     ],
 )
 def test_supported_comments(comment: str) -> None:

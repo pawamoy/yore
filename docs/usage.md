@@ -22,6 +22,8 @@ The syntax is as follows:
        | <eol|bol> [<ECOSYSTEM> ]<VERSION>
        | ghi <GITHUB-REFERENCE>
        | ghp <GITHUB-REFERENCE>
+       | rdi <RADICLE-REFERENCE>
+       | rdp <RADICLE-REFERENCE>
 
 <ECOSYSTEM> = python | rust
 ```
@@ -55,6 +57,8 @@ The following table is exhaustive:
 | `EOL` | End of ecosystem life | — |
 | `GHI` | GitHub issue | `gh issue`, `github issue` |
 | `GHP` | GitHub pull request | `gh pr`, `github pr`, `gh pull request`, `github pull request` |
+| `RDI` | Radicle issue | `rd issue`, `rad issue`, `radicle issue` |
+| `RDP` | Radicle patch | `rd patch`, `rad patch`, `radicle patch` |
 
 For example, `GHI`, `gh issue`, and `GitHub Issue` select exactly the same
 trigger. Readable aliases are normalized to their compact kind internally and
@@ -83,6 +87,17 @@ Python lifecycle dates come from the Python release-cycle data. Rust dates come 
 GitHub references accept `owner/repository#number`, `#number`, or `number`. The two short forms use `GITHUB_REPOSITORY` when it is set (as it normally is in GitHub Actions), then fall back to the Git `origin` remote. `GHI` becomes actionable only when the issue is closed with reason `completed`; `GHP` becomes actionable only when the pull request is merged. During `check`, an issue closed for another reason and a pull request closed without merging emit warnings and make the check fail, but `diff` and `fix` leave their code untouched.
 
 Yore reads public GitHub data without authentication. Set `GH_TOKEN` (preferred) or `GITHUB_TOKEN` to raise the rate limit and access private repositories. `GITHUB_API_URL` changes the API root for GitHub Enterprise; it defaults to `https://api.github.com`. A reference is fetched once per process. API, authentication, rate-limit, and malformed-response errors propagate instead of being treated as open work.
+
+### Radicle triggers
+
+Radicle references accept a full 40-hex issue or patch object ID, optionally prefixed with a repository and `#`:
+
+- `0123456789abcdef0123456789abcdef01234567` or `#0123456789abcdef0123456789abcdef01234567` uses the current repository;
+- `rad:z4TEkvLebGGXYE3pgxHGu1GGpUM94#0123456789abcdef0123456789abcdef01234567` names a RID explicitly;
+
+For an ID-only reference, Yore first reads the conventional Git `rad` remote and then falls back to `rad inspect --rid`. A full object ID is required so the reference resolves consistently across nodes. `RDI` becomes actionable only for an issue whose state is `closed` with reason `solved`; a `closed`/`other` issue warns and remains untouched. `RDP` becomes actionable only for a `merged` patch; an `archived` patch warns and remains untouched. Open issues and open or draft patches are inactive.
+
+Yore runs `rad cob show --repo <RID> --type xyz.radicle.issue --object <OBJECT-ID> --format json` for issues. It uses `xyz.radicle.patch` as the type for patches. Install `rad` and seed each referenced repository in local Radicle storage first. Yore reads the state available in that storage and fetches each object once per process. Missing objects, CLI failures, decoding errors, and unexpected states propagate.
 
 Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
 
@@ -144,6 +159,22 @@ legacy_issue_workaround()
 ```python
 # YORE: GHP #456: Remove line.
 temporary_pr_compatibility()
+```
+
+*Remove a workaround after a Radicle issue is solved.*
+
+```rust
+// YORE: RDI 0123456789abcdef0123456789abcdef01234567: Remove line.
+legacy_issue_workaround();
+```
+
+*Remove temporary code after a patch in another Radicle repository is merged.*
+
+```rust
+// YORE: RDP rad:z4TEkvLebGGXYE3pgxHGu1GGpUM94#89abcdef0123456789abcdef0123456789abcdef: Remove block.
+if compatibility_required() {
+    temporary_patch_compatibility();
+}
 ```
 
 *Simplify union of accepted types when we bump the project to version 1.0.0.*
