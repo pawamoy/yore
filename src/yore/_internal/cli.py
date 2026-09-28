@@ -77,6 +77,20 @@ def _parse_timedelta(value: str) -> timedelta:
     return timedelta(days=int(number) * multiplier)
 
 
+def _select_config(value: Any) -> Config:
+    """Load an explicitly selected configuration during argument parsing."""
+    return CommandMain._load_config(value)
+
+
+@dataclass(kw_only=True)
+class _ServiceOptions:
+    """Shared work-item service URL options."""
+
+    def _service_urls(self) -> dict[str, str]:
+        values: dict[str, str | None] = {}
+        return {service: url for service, url in values.items() if url is not None}
+
+
 @cappa.command(  # ty:ignore[call-non-callable]
     name="check",
     help="Check Yore comments.",
@@ -89,7 +103,7 @@ def _parse_timedelta(value: str) -> timedelta:
     ),
 )
 @dataclass(kw_only=True)
-class CommandCheck:
+class CommandCheck(_ServiceOptions):
     """Command to check Yore comments."""
 
     paths: An[
@@ -148,7 +162,12 @@ class CommandCheck:
         paths = self.paths or [Path()]
         for path in paths:
             for comment in yield_path_comments(path, prefix=self.prefix):
-                ok &= comment.check(bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within)
+                ok &= comment.check(
+                    bump=self.bump,
+                    eol_within=self.eol_within,
+                    bol_within=self.bol_within,
+                    service_urls=self._service_urls(),
+                )
         return 0 if ok else 1
 
 
@@ -163,7 +182,7 @@ class CommandCheck:
     ),
 )
 @dataclass(kw_only=True)
-class CommandDiff:
+class CommandDiff(_ServiceOptions):
     """Command to diff Yore comments."""
 
     paths: An[
@@ -245,6 +264,7 @@ class CommandDiff:
                 bump=self.bump,
                 eol_within=self.eol_within,
                 bol_within=self.bol_within,
+                service_urls=self._service_urls(),
             )
             if not new_lines:
                 _logger.debug(f"no more lines in {file}, breaking early")
@@ -285,7 +305,7 @@ class CommandDiff:
     ),
 )
 @dataclass(kw_only=True)
-class CommandFix:
+class CommandFix(_ServiceOptions):
     """Command to fix Yore comments."""
 
     paths: An[
@@ -349,7 +369,13 @@ class CommandFix:
             key=lambda c: c.lineno,
             reverse=True,
         ):
-            if comment.fix(buffer=lines, bump=self.bump, eol_within=self.eol_within, bol_within=self.bol_within):
+            if comment.fix(
+                buffer=lines,
+                bump=self.bump,
+                eol_within=self.eol_within,
+                bol_within=self.bol_within,
+                service_urls=self._service_urls(),
+            ):
                 count += 1
                 if not lines:
                     _logger.debug(f"no more lines in {file}, breaking early")
@@ -443,9 +469,14 @@ class CommandMain:
     subcommand: An[cappa.Subcommands[CommandCheck | CommandDiff | CommandFix], Doc("The selected subcommand.")]
 
     @staticmethod
-    def _load_config(file: Path | None = None) -> Config:
-        if CommandMain._CONFIG is None:
-            CommandMain._CONFIG = Config.from_file(file) if file else Config.from_default_locations()
+    def _load_config(file: str | Path | None = None) -> Config:
+        if file:
+            path = Path(file)
+            CommandMain._CONFIG = (
+                Config.from_pyproject(path) if path.name == "pyproject.toml" else Config.from_file(path)
+            )
+        elif CommandMain._CONFIG is None:
+            CommandMain._CONFIG = Config.from_default_locations()
         return CommandMain._CONFIG
 
     @staticmethod
@@ -468,7 +499,7 @@ class CommandMain:
         cappa.Arg(
             short="-c",
             long=True,
-            parse=_load_config,
+            action=_select_config,
             propagate=True,
             show_default="`config/yore.toml`, `yore.toml`, or `pyproject.toml`",
         ),

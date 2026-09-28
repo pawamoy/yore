@@ -43,12 +43,14 @@ from yore._internal.lib import (
     yield_files,
     yield_path_comments,
 )
+from yore._internal.work_items import DEFAULT_SERVICE_URLS
 
 __all__: list[str] = [
     "COMMENT_PATTERN",
     "COMMENT_PREFIXES",
     "DEFAULT_EXCLUDE",
     "DEFAULT_PREFIX",
+    "DEFAULT_SERVICE_URLS",
     "CommandCheck",
     "CommandDiff",
     "CommandFix",

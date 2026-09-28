@@ -35,8 +35,14 @@ from urllib.request import urlopen
 from humanize import naturaldelta
 from packaging.version import Version
 
+from yore._internal.work_items import (
+    _SERVICE_KINDS,
+    _fetch_work_item,
+    _WorkItem,
+)
+
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
     from pathlib import Path
 
 YoreKind = Literal[
@@ -221,7 +227,7 @@ class YoreComment:
     kind: YoreKind
     """The kind of comment."""
     version: str
-    """The lifecycle/bump version."""
+    """The lifecycle/bump version or external work-item reference."""
     versioned: Versioned = "python"
     """The versioned project for BOL/EOL comments."""
     remove: Scope | None = None
@@ -259,6 +265,11 @@ class YoreComment:
         return self.kind.lower() == "bump"
 
     @property
+    def is_service_item(self) -> bool:
+        """Whether the comment targets another supported work-item service."""
+        return self.kind.lower() in _SERVICE_KINDS
+
+    @property
     def bol(self) -> Date:
         """The Beginning of Life date for the versioned project."""
         return lifecycle_dates[self.versioned][self.version][0]
@@ -273,12 +284,21 @@ class YoreComment:
         """The comment without the prefix."""
         return self.raw.removeprefix(self.prefix).removesuffix(self.suffix)
 
+    def _service_item(self, service_urls: Mapping[str, str] | None = None) -> _WorkItem:
+        return _fetch_work_item(
+            self.kind,
+            self.version,
+            self.file,
+            service_urls=service_urls,
+        )
+
     def check(
         self,
         *,
         bump: str | None = None,
         eol_within: TimeDelta | None = None,
         bol_within: TimeDelta | None = None,
+        service_urls: Mapping[str, str] | None = None,
     ) -> bool:
         """Check the comment.
 
@@ -286,6 +306,7 @@ class YoreComment:
             bump: The next version of the project.
             eol_within: The time delta to start warning before the End of Life of a versioned project.
             bol_within: The time delta to start warning before the Beginning of Life of a versioned project.
+            service_urls: Optional API URL overrides keyed by service name.
 
         Returns:
             True when there is nothing to do, False otherwise.
@@ -320,6 +341,18 @@ class YoreComment:
                 _logger.error(f"{msg_location} since {bol} {self.comment}")
             else:
                 return True
+        elif self.is_service_item:
+            item = self._service_item(service_urls)
+            if item.completed:
+                _logger.error(
+                    f"{msg_location} {item.service} {item.noun} {item.reference} was {item.completion}: {self.comment}",
+                )
+            elif item.closed:
+                _logger.warning(
+                    f"{msg_location} {item.service} {item.noun} {item.reference} {item.rejection}: {self.comment}",
+                )
+            else:
+                return True
         elif self.is_bump and bump and Version(bump) >= Version(self.version):
             _logger.error(f"{msg_location} version {self.version} >= {self.comment}")
         else:
@@ -333,6 +366,7 @@ class YoreComment:
         bump: str | None = None,
         eol_within: TimeDelta | None = None,
         bol_within: TimeDelta | None = None,
+        service_urls: Mapping[str, str] | None = None,
     ) -> bool:
         """Fix the comment and code below it.
 
@@ -341,6 +375,7 @@ class YoreComment:
             bump: The next version of the project.
             eol_within: The time delta to start fixing before the End of Life of a versioned project.
             bol_within: The time delta to start fixing before the Beginning of Life of a versioned project.
+            service_urls: Optional API URL overrides keyed by service name.
 
         Returns:
             Whether the comment was fixed.
@@ -367,6 +402,8 @@ class YoreComment:
             pass
         if not due and self.is_bump and bump:
             due = Version(bump) >= Version(self.version)
+        if not due and self.is_service_item:
+            due = self._service_item(service_urls).completed
 
         if due:
             # Start at the commnent line, immediately remove it.
