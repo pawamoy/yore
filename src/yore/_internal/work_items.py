@@ -24,7 +24,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from functools import cache
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
@@ -32,10 +32,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-_ServiceKind = Literal["gli", "glm"]
+_ServiceKind = Literal["fji", "fjp", "gli", "glm"]
 
 _SERVICE_KINDS: frozenset[str] = frozenset(
     {
+        "fji",
+        "fjp",
         "gli",
         "glm",
     },
@@ -43,11 +45,13 @@ _SERVICE_KINDS: frozenset[str] = frozenset(
 """Yore kinds handled by this module."""
 
 DEFAULT_SERVICE_URLS: dict[str, str] = {
+    "forgejo": "https://codeberg.org/api/v1",
     "gitlab": "https://gitlab.com/api/v4",
 }
 """Default API roots for providers that have a canonical public service."""
 
 _SERVICE_ENV_URLS: dict[str, tuple[str, ...]] = {
+    "forgejo": ("FORGEJO_API_URL", "FORGEJO_SERVER_URL", "FORGEJO_URL"),
     "gitlab": ("GITLAB_API_URL", "CI_API_V4_URL", "GITLAB_URL"),
 }
 
@@ -125,6 +129,7 @@ def _normalize_service_url(service: str, value: str) -> str:
 
     path = parsed.path.rstrip("/")
     suffixes = {
+        "forgejo": "/api/v1",
         "gitlab": "/api/v4",
     }
     if (suffix := suffixes.get(service)) and not path.endswith(suffix):
@@ -139,6 +144,8 @@ def _headers(service: str) -> dict[str, str]:
             headers["PRIVATE-TOKEN"] = token
         elif token := os.environ.get("CI_JOB_TOKEN"):
             headers["JOB-TOKEN"] = token
+    elif service == "forgejo" and (token := os.environ.get("FORGEJO_TOKEN")):
+        headers["Authorization"] = f"token {token}"
     return headers
 
 
@@ -194,6 +201,7 @@ def _remote_path(remote: str) -> list[str]:
 
 def _default_repository(service: str, file: Path, *, nested: bool = False) -> str:
     env_names = {
+        "forgejo": ("FORGEJO_REPOSITORY",),
         "gitlab": ("CI_PROJECT_PATH",),
     }
     for name in env_names[service]:
@@ -372,6 +380,67 @@ def _fetch_gitlab_item(kind: Literal["gli", "glm"], repository: str, number: int
     )
 
 
+@cache
+def _fetch_forge_item(
+    service: Literal["forgejo"],
+    kind: Literal["fji", "fjp"],
+    repository: str,
+    number: int,
+    api_url: str,
+) -> _WorkItem:
+    owner, repo = repository.split("/", 1)
+    data = _request_json(
+        f"{api_url}/repos/{quote(owner, safe='')}/{quote(repo, safe='')}/issues/{number}",
+        headers=_headers(service),
+    )
+    state = data.get("state")
+    if state not in {"open", "closed"}:
+        raise ValueError(f"Unsupported {service.title()} item state {state!r} for {repository}#{number}")
+    pull_request = data.get("pull_request")
+    is_pull = isinstance(pull_request, dict)
+    wants_pull = kind == "fjp"
+    if wants_pull != is_pull:
+        expected = "pull request" if wants_pull else "issue"
+        actual = "issue" if wants_pull else "pull request"
+        article = "an" if actual == "issue" else "a"
+        expected_article = "an" if expected == "issue" else "a"
+        raise ValueError(
+            f"{service.title()} reference {repository}#{number} is {article} {actual}, "
+            f"not {expected_article} {expected}",
+        )
+    display = "Forgejo"
+    reference = f"{repository}#{number}"
+    if wants_pull:
+        pull_data = cast("dict[str, object]", pull_request)
+        merged = pull_data.get("merged") is True or pull_data.get("merged_at") is not None
+        return _WorkItem(
+            display,
+            "pull request",
+            reference,
+            closed=state == "closed" or merged,
+            completed=merged,
+            completion="merged",
+            rejection="was closed without being merged",
+        )
+    if state == "open":
+        return _WorkItem(
+            display,
+            "issue",
+            reference,
+            closed=False,
+            completed=False,
+        )
+    completed, reason = _label_completion(service, data)
+    return _WorkItem(
+        display,
+        "issue",
+        reference,
+        closed=True,
+        completed=completed,
+        rejection=f"was closed with {reason}, not completed",
+    )
+
+
 def _fetch_work_item(
     kind: _ServiceKind | str,
     reference: str,
@@ -393,6 +462,16 @@ def _fetch_work_item(
             _service_url("gitlab", service_urls),
         )
 
+    if normalized_kind in {"fji", "fjp"}:
+        repository, number = _parse_repository_reference(reference, file, "forgejo")
+        return _fetch_forge_item(
+            "forgejo",
+            normalized_kind,
+            repository,
+            number,
+            _service_url("forgejo", service_urls),
+        )
+
     raise ValueError(f"Unsupported work-item kind: {kind}")
 
 
@@ -400,3 +479,4 @@ def _clear_work_item_caches() -> None:
     """Clear all provider and repository-inference caches."""
     _origin_remote.cache_clear()
     _fetch_gitlab_item.cache_clear()
+    _fetch_forge_item.cache_clear()

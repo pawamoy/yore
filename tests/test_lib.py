@@ -953,6 +953,11 @@ def test_supported_comment_syntax(comment_syntax: str) -> None:
         ("bol", ("bol",)),
         ("bump", ("bump",)),
         ("eol", ("eol",)),
+        ("fji", ("fji", "fj issue", "forgejo issue")),
+        (
+            "fjp",
+            ("fjp", "fj pr", "forgejo pr", "fj pull request", "forgejo pull request"),
+        ),
         ("ghi", ("ghi", "gh issue", "github issue")),
         (
             "ghp",
@@ -1028,6 +1033,8 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
         f"RDP {_RADICLE_RID}#{_RADICLE_OBJECT_ID}: Remove line.",
         "GLI group/project#42: Remove line.",
         "GLM group/project!42: Remove line.",
+        "FJI owner/repository#42: Remove line.",
+        "FJP owner/repository#42: Remove line.",
     ],
 )
 def test_supported_comments(comment: str) -> None:

@@ -50,6 +50,7 @@ def test_show_help(capsys: pytest.CaptureFixture) -> None:
 def test_service_url_options_are_documented(capsys: pytest.CaptureFixture) -> None:
     """Every network-backed operation exposes all service URL overrides."""
     options = {
+        "--forgejo-url",
         "--gitlab-url",
     }
     for command in ("check", "diff", "fix"):
@@ -75,6 +76,8 @@ def test_service_urls_from_cli(monkeypatch: pytest.MonkeyPatch) -> None:
                 "check",
                 "--gitlab-url",
                 "https://gitlab.example",
+                "--forgejo-url",
+                "https://forgejo.example",
             ],
         )
         == 0
@@ -82,6 +85,7 @@ def test_service_urls_from_cli(monkeypatch: pytest.MonkeyPatch) -> None:
     assert received == [
         {
             "gitlab": "https://gitlab.example",
+            "forgejo": "https://forgejo.example",
         },
     ]
 

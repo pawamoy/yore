@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.request import Request  # noqa: TC003
 
 import pytest
 
@@ -44,10 +45,7 @@ def _clear_caches() -> None:
 
 @pytest.mark.parametrize(
     "when",
-    [
-        "GLI group/project#42",
-        "GLM group/project!42",
-    ],
+    ["GLI group/project#42", "GLM group/project!42", "FJI owner/repo#42", "FJP owner/repo#42"],
 )
 def test_service_comment_kinds_are_parsed(when: str) -> None:
     """Supported external service kinds are part of the comment grammar."""
@@ -62,6 +60,7 @@ def test_service_comment_kinds_are_parsed(when: str) -> None:
     [
         ("gitlab", "https://gitlab.example", "https://gitlab.example/api/v4"),
         ("gitlab", "https://gitlab.example/api/v4/", "https://gitlab.example/api/v4"),
+        ("forgejo", "http://forge.local", "http://forge.local/api/v1"),
     ],
 )
 def test_service_url_normalization(service: str, value: str, expected: str) -> None:
@@ -96,6 +95,7 @@ def test_service_url_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
     [
         ("gitlab", {"GITLAB_TOKEN": "secret"}, "PRIVATE-TOKEN", "secret"),
         ("gitlab", {"CI_JOB_TOKEN": "job-secret"}, "JOB-TOKEN", "job-secret"),
+        ("forgejo", {"FORGEJO_TOKEN": "secret"}, "Authorization", "token secret"),
     ],
 )
 def test_service_authentication_headers(
@@ -122,6 +122,7 @@ def test_service_authentication_headers(
         ("gitlab", "group/project!42", ("group/project", 42)),
         ("gitlab", "!42", ("default/project", 42)),
         ("gitlab", "#42", ("default/project", 42)),
+        ("forgejo", "owner/repo#42", ("owner/repo", 42)),
     ],
 )
 def test_repository_reference_markers(
@@ -130,10 +131,35 @@ def test_repository_reference_markers(
     expected: tuple[str, int],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """GitLab accepts its native bang notation and short references."""
+    """GitLab accepts its native bang notation while Forgejo uses hashes."""
     monkeypatch.setenv("CI_PROJECT_PATH", "default/project")
 
     assert wi._parse_repository_reference(reference, Path("test.py"), service, nested=service == "gitlab") == expected
+
+
+def test_non_gitlab_bang_reference_is_rejected() -> None:
+    """A bang marker cannot be mistaken for a Forgejo issue number."""
+    with pytest.raises(ValueError, match="only GitLab uses"):
+        wi._parse_repository_reference("owner/repo!42", Path("test.py"), "forgejo")
+
+
+def test_request_json_builds_authenticated_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """JSON helpers send a bounded request with the supplied headers."""
+    requests: list[Request] = []
+
+    def _urlopen(request: Request, timeout: int) -> _Response:
+        requests.append(request)
+        assert timeout == 3
+        return _Response({"state": "open"})
+
+    monkeypatch.setenv("FORGEJO_TOKEN", "secret")
+    monkeypatch.setattr(wi, "urlopen", _urlopen)
+
+    data = wi._request_json("https://forge.example/api/v1/repos/owner/repo/issues/42", headers=wi._headers("forgejo"))
+    headers = {name.casefold(): value for name, value in requests[0].header_items()}
+
+    assert headers["authorization"] == "token secret"
+    assert data == {"state": "open"}
 
 
 @pytest.mark.parametrize(
@@ -230,6 +256,68 @@ def test_conflicting_issue_labels_are_not_completed() -> None:
 
 
 @pytest.mark.parametrize(
+    ("kind_suffix", "payload", "expected"),
+    [
+        ("i", {"state": "open"}, (False, False)),
+        (
+            "i",
+            {"state": "closed", "labels": [{"name": "yore:completed"}]},
+            (True, True),
+        ),
+        ("i", {"state": "closed", "labels": []}, (True, False)),
+        (
+            "p",
+            {"state": "open", "pull_request": {"merged": False}},
+            (False, False),
+        ),
+        (
+            "p",
+            {
+                "state": "closed",
+                "pull_request": {"merged": True, "merged_at": "2026-01-01"},
+            },
+            (True, True),
+        ),
+        (
+            "p",
+            {"state": "closed", "pull_request": {"merged": False}},
+            (True, False),
+        ),
+    ],
+)
+def test_forge_states(
+    kind_suffix: str,
+    payload: dict[str, object],
+    expected: tuple[bool, bool],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forgejo issues and pull requests use their completion state."""
+    monkeypatch.setattr(wi, "_request_json", lambda *args, **kwargs: payload)
+    item = wi._fetch_forge_item(
+        "forgejo",
+        f"fj{kind_suffix}",
+        "owner/repo",
+        42,
+        "https://forgejo.example/api/v1",
+    )
+    assert (item.closed, item.completed) == expected
+
+
+def test_forge_kind_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Issue tags never silently accept pull-request objects."""
+    monkeypatch.setattr(
+        wi,
+        "_request_json",
+        lambda *args, **kwargs: {
+            "state": "closed",
+            "pull_request": {"merged": True},
+        },
+    )
+    with pytest.raises(ValueError, match="a pull request, not an issue"):
+        wi._fetch_forge_item("forgejo", "fji", "owner/repo", 42, "https://forge.example/api/v1")
+
+
+@pytest.mark.parametrize(
     ("closed", "completed", "expected", "level"),
     [
         (False, False, True, None),
@@ -275,6 +363,26 @@ def test_service_comment_check_and_fix(
             "legacy()\n",
         ]
     )
+
+
+def test_dispatch_and_short_repository_inference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Short forge references infer their repository from the origin remote."""
+    monkeypatch.setattr(wi, "_origin_remote", lambda directory: "git@codeberg.org:owner/repo.git")
+    monkeypatch.setattr(
+        wi,
+        "_fetch_forge_item",
+        lambda service, kind, repository, number, url: wi._WorkItem(
+            "Forgejo",
+            "issue",
+            f"{repository}#{number}",
+            closed=False,
+            completed=False,
+        ),
+    )
+    item = wi._fetch_work_item("fji", "#42", Path("test.py"))
+    assert item.reference == "owner/repo#42"
 
 
 @pytest.mark.parametrize("kind", ["azi", "azp", "bbp", "bzi", "grc", "gti", "gtp", "jri", "lni"])

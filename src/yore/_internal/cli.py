@@ -97,8 +97,20 @@ class _ServiceOptions:
         Doc("The GitLab instance or API URL."),
     ] = None
 
+    forgejo_url: An[
+        str | None,
+        cappa.Arg(
+            long=True,
+            value_name="URL",
+            default=_FromConfig(Config.forgejo_url),  # ty: ignore[invalid-argument-type]
+            show_default=f"{Config.forgejo_url}, `FORGEJO_URL`, or Codeberg",
+        ),
+        Doc("The Forgejo instance or API URL."),
+    ] = None
+
     def _service_urls(self) -> dict[str, str]:
         values = {
+            "forgejo": self.forgejo_url,
             "gitlab": self.gitlab_url,
         }
         return {service: url for service, url in values.items() if url is not None}
@@ -432,34 +444,30 @@ class CommandFix(_ServiceOptions):
         # <PREFIX>: <WHEN>: replace <block|line> with `<STRING>`.
         # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
 
-        `<WHEN>` is `bump <VERSION>` or `<eol|bol> [<ECOSYSTEM> ]<VERSION>`.
-        It also accepts external work-item references:
-        `GHI` and `GHP` (GitHub).
-        `RDI` and `RDP` (Radicle).
-        `GLI` and `GLM` (GitLab).
+        `<WHEN>` is `bump <VERSION>`, `<eol|bol> [<ECOSYSTEM> ]<VERSION>`, or
+        an external work-item reference. Supported work-item tags are `GHI` and
+        `GHP` (GitHub), `RDI` and `RDP` (Radicle), `GLI` and `GLM` (GitLab),
+        and `FJI` and `FJP` (Forgejo).
 
-        Work-item triggers accept case-insensitive compact tags and readable provider names.
+        Trigger spellings are case-insensitive. GitHub, Radicle, GitLab,
+        and Forgejo references accept compact tags or readable provider names.
+        GitLab merge requests also accept `group/project!number` and `!number`.
 
         Supported lifecycle ecosystems are Python and Rust. When no ecosystem
         is given, Yore infers Rust from Cargo files and `.rs` files, and
-        defaults to Python for other files.
+        defaults to Python for other files. Repository-backed work items accept
+        an explicit repository and number or a short `#number`/`number` form.
+        Short references use CI metadata and then the Git `origin` remote.
 
         GitHub references accept `owner/repository#number`, `#number`, or
         `number`. Short references use `GITHUB_REPOSITORY`, then the Git
         `origin` remote. Authentication uses `GH_TOKEN` or `GITHUB_TOKEN` when
         available.
-
         Radicle references accept `rad:<RID>#<OBJECT-ID>` or `<OBJECT-ID>`.
         An object ID is the full 40-hex issue or patch ID. Short references
         infer the RID from the Git `rad` remote, then `rad inspect --rid`.
         Yore reads locally seeded COBs with `rad cob show`.
 
-
-        GitLab merge requests also accept `group/project!number` and `!number`.
-
-        Repository-backed work items accept an explicit repository and number
-        or a short `#number`/`number` form. Short references use CI metadata
-        and then the Git `origin` remote.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
