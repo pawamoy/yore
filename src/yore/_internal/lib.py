@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -30,7 +31,8 @@ from datetime import timezone as TimeZone  # noqa: N812
 from functools import cache
 from re import Pattern
 from typing import TYPE_CHECKING, Literal, cast
-from urllib.request import urlopen
+from urllib.parse import quote, urlsplit
+from urllib.request import Request, urlopen
 
 from humanize import naturaldelta
 from packaging.version import Version
@@ -49,6 +51,8 @@ YoreKind = Literal[
     "bol",
     "bump",
     "eol",
+    "ghi",
+    "ghp",
 ]
 """The supported kinds of Yore comments."""
 
@@ -56,6 +60,8 @@ _KIND_SPELLINGS: dict[YoreKind, tuple[str, ...]] = {
     "bol": ("bol",),
     "bump": ("bump",),
     "eol": ("eol",),
+    "ghi": ("ghi", "gh issue", "github issue"),
+    "ghp": ("ghp", "gh pr", "github pr", "gh pull request", "github pull request"),
 }
 """Accepted case-insensitive spellings for each canonical Yore kind."""
 
@@ -63,6 +69,7 @@ _KIND_ALIASES: dict[str, YoreKind] = {
     spelling: kind for kind, spellings in _KIND_SPELLINGS.items() for spelling in spellings
 }
 
+_GitHubKind = Literal["ghi", "ghp"]
 
 Versioned = Literal["python", "rust"]
 """The versioned projects supported by lifecycle comments."""
@@ -215,6 +222,125 @@ def _past(date: Date) -> bool:
     return date <= DateTime.now(tz=TimeZone.utc).date()
 
 
+_GITHUB_API_VERSION = "2022-11-28"
+_GITHUB_REFERENCE_PATTERN = re.compile(
+    r"(?:(?P<repository>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#)?#?(?P<number>[1-9]\d*)\Z",
+)
+_GITHUB_REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
+
+
+@dataclass(frozen=True)
+class _GitHubItem:
+    repository: str
+    number: int
+    closed: bool
+    completed: bool
+    reason: str | None = None
+
+    @property
+    def reference(self) -> str:
+        return f"{self.repository}#{self.number}"
+
+
+def _repository_from_remote(remote: str) -> str:
+    if "://" in remote:
+        path = urlsplit(remote).path
+    elif ":" in remote:
+        _, _, path = remote.partition(":")
+    else:
+        path = remote
+    parts = path.strip("/").removesuffix(".git").split("/")
+    if len(parts) != 2:  # noqa: PLR2004
+        raise ValueError(
+            f"Cannot determine a GitHub repository from remote URL: {remote}",
+        )
+    repository = "/".join(parts)
+    if not _GITHUB_REPOSITORY_PATTERN.fullmatch(repository):
+        raise ValueError(f"Invalid GitHub repository from remote URL: {remote}")
+    return repository
+
+
+@cache
+def _repository_from_git(directory: str) -> str:
+    result = subprocess.run(
+        ["git", "remote", "get-url", "origin"],  # noqa: S607
+        capture_output=True,
+        cwd=directory,
+        text=True,
+        check=False,
+    )
+    if result.returncode or not result.stdout.strip():
+        raise ValueError(
+            "Cannot determine the GitHub repository: Git remote 'origin' is unavailable",
+        )
+    return _repository_from_remote(result.stdout.strip())
+
+
+def _default_github_repository(file: Path) -> str:
+    if repository := os.environ.get("GITHUB_REPOSITORY"):
+        if not _GITHUB_REPOSITORY_PATTERN.fullmatch(repository):
+            raise ValueError(f"Invalid GITHUB_REPOSITORY value: {repository}")
+        return repository
+
+    directory = file.resolve().parent
+    while not directory.is_dir() and directory != directory.parent:
+        directory = directory.parent
+    return _repository_from_git(str(directory))
+
+
+def _parse_github_reference(reference: str, file: Path) -> tuple[str, int]:
+    if not (match := _GITHUB_REFERENCE_PATTERN.fullmatch(reference.strip())):
+        raise ValueError(
+            f"Invalid GitHub reference {reference!r}; expected NUMBER, #NUMBER, or OWNER/REPOSITORY#NUMBER",
+        )
+    repository = match.group("repository") or _default_github_repository(file)
+    return repository, int(match.group("number"))
+
+
+@cache
+def _fetch_github_item(
+    kind: _GitHubKind,
+    repository: str,
+    number: int,
+    api_url: str,
+) -> _GitHubItem:
+    owner, repo = repository.split("/", 1)
+    resource = "issues" if kind == "ghi" else "pulls"
+    url = f"{api_url.rstrip('/')}/repos/{quote(owner, safe='')}/{quote(repo, safe='')}/{resource}/{number}"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "yore",
+        "X-GitHub-Api-Version": _GITHUB_API_VERSION,
+    }
+    if token := os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"):
+        headers["Authorization"] = f"Bearer {token}"
+    request = Request(url, headers=headers)  # noqa: S310
+    data = json.loads(urlopen(request, timeout=3).read())  # noqa: S310
+
+    if kind == "ghi":
+        if "pull_request" in data:
+            raise ValueError(
+                f"GitHub reference {repository}#{number} is a pull request, not an issue",
+            )
+        closed = data["state"] == "closed"
+        reason = data.get("state_reason")
+        return _GitHubItem(
+            repository=repository,
+            number=number,
+            closed=closed,
+            completed=closed and reason == "completed",
+            reason=reason,
+        )
+
+    merged = data.get("merged") is True or data.get("merged_at") is not None
+    return _GitHubItem(
+        repository=repository,
+        number=number,
+        closed=data["state"] == "closed",
+        completed=merged,
+    )
+
+
 @dataclass(kw_only=True)
 class YoreComment:
     """A Yore comment."""
@@ -270,6 +396,16 @@ class YoreComment:
         return self.kind.lower() == "bump"
 
     @property
+    def is_ghi(self) -> bool:
+        """Whether the comment is a GitHub issue comment."""
+        return self.kind.lower() == "ghi"
+
+    @property
+    def is_ghp(self) -> bool:
+        """Whether the comment is a GitHub pull request comment."""
+        return self.kind.lower() == "ghp"
+
+    @property
     def is_service_item(self) -> bool:
         """Whether the comment targets another supported work-item service."""
         return self.kind.lower() in _SERVICE_KINDS
@@ -288,6 +424,12 @@ class YoreComment:
     def comment(self) -> str:
         """The comment without the prefix."""
         return self.raw.removeprefix(self.prefix).removesuffix(self.suffix)
+
+    def _github_item(self) -> _GitHubItem:
+        kind: _GitHubKind = "ghi" if self.is_ghi else "ghp"
+        repository, number = _parse_github_reference(self.version, self.file)
+        api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+        return _fetch_github_item(kind, repository, number, api_url)
 
     def _service_item(self, service_urls: Mapping[str, str] | None = None) -> _WorkItem:
         return _fetch_work_item(
@@ -344,6 +486,27 @@ class YoreComment:
                 _logger.warning(f"{msg_location} {delta} {self.comment}")
             elif _within(TimeDelta(days=0), bol):
                 _logger.error(f"{msg_location} since {bol} {self.comment}")
+            else:
+                return True
+        elif self.is_ghi or self.is_ghp:
+            item = self._github_item()
+            if item.completed:
+                completed = "completed" if self.is_ghi else "merged"
+                noun = "issue" if self.is_ghi else "pull request"
+                _logger.error(
+                    f"{msg_location} GitHub {noun} {item.reference} was {completed}: {self.comment}",
+                )
+            elif item.closed:
+                if self.is_ghi:
+                    reason = f" as {item.reason.replace('_', ' ')}" if item.reason else ""
+                    _logger.warning(
+                        f"{msg_location} GitHub issue {item.reference} was closed{reason}, not completed: {self.comment}",
+                    )
+                else:
+                    _logger.warning(
+                        f"{msg_location} GitHub pull request {item.reference} was closed without being merged: "
+                        f"{self.comment}",
+                    )
             else:
                 return True
         elif self.is_service_item:
@@ -407,6 +570,8 @@ class YoreComment:
             pass
         if not due and self.is_bump and bump:
             due = Version(bump) >= Version(self.version)
+        if not due and (self.is_ghi or self.is_ghp):
+            due = self._github_item().completed
         if not due and self.is_service_item:
             due = self._service_item(service_urls).completed
 

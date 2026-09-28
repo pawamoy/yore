@@ -19,7 +19,7 @@ For these use-cases, Yore comes to the rescue.
 
 Yore was born from the will of automating comments I had added along the evolution of my projects. I was usually writing comments such as `TODO: Remove once support for Python 3.8 is dropped`, or `TODO: Remove when we are ready for v1`. One day I decided to make these comments more formal, so I designed a very simple syntax and wrote a tool that would parse them and act on them.
 
-Yore can therefore find comments in your code base, to warn you about lifecycle dates of supported ecosystem versions, or outdated code based on the project version. It can also apply transformations to your code, to remove legacy blocks or lines of code or update them.
+Yore can therefore find comments in your code base, to warn you about lifecycle dates of supported ecosystem versions, fulfilled external work items, or outdated code based on the project version. It can also apply transformations to your code, to remove legacy blocks or lines of code or update them.
 
 **Yore is language agnostic.** It can scan comments in many languages. Its lifecycle triggers support Python and Rust.
 
@@ -40,6 +40,16 @@ Yore infers Rust from Cargo files and `.rs` files. It uses Python for other file
 ```rust
 // YORE: EOL Rust 1.72: Remove line.
 compatibility_workaround();
+```
+
+GitHub work can trigger transformations too. Trigger names are case-insensitive and can use compact tags or readable aliases: `GHI`, `gh issue`, and `github issue` are equivalent, as are `GHP`, `gh pull request`, and `github pull request`. Use `owner/repository#number` for any repository, or `#number` for the current repository:
+
+```python
+# YORE: GitHub issue pawamoy/yore#123: Remove block.
+legacy_issue_workaround()
+
+# YORE: gh pull request #456: Remove line.
+temporary_pr_compatibility()
 ```
 
 Check your code base:

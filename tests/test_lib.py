@@ -20,12 +20,25 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from yore._internal import lib
+
+if TYPE_CHECKING:
+    from urllib.request import Request
+
+
+class _Response:
+    def __init__(self, data: object) -> None:
+        self.data = data
+
+    def read(self) -> bytes:
+        return json.dumps(self.data).encode()
 
 
 @pytest.mark.parametrize(
@@ -172,6 +185,313 @@ def test_explicit_versioned_project_overrides_inference() -> None:
     assert parsed.versioned == "python"
 
 
+@pytest.mark.parametrize("kind", ["GHI", "GHP"])
+def test_github_repository_owner_is_not_an_ecosystem_qualifier(kind: str) -> None:
+    """GitHub repository owners can have the same name as an ecosystem."""
+    parsed = next(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=[f"# YORE: {kind} rust/project#42: Remove line."],
+        ),
+    )
+    assert parsed.version == "rust/project#42"
+
+
+@pytest.mark.parametrize(
+    "remote",
+    [
+        "git@github.com:octocat/example.git",
+        "https://github.com/octocat/example.git",
+        "ssh://git@github.com/octocat/example.git",
+        "git://github.com/octocat/example.git",
+    ],
+)
+def test_repository_from_remote(remote: str) -> None:
+    """Common GitHub remote URL forms resolve to an owner/repository pair."""
+    assert lib._repository_from_remote(remote) == "octocat/example"
+
+
+@pytest.mark.parametrize(
+    ("reference", "expected"),
+    [
+        ("octocat/example#42", ("octocat/example", 42)),
+        ("#42", ("default/project", 42)),
+        ("42", ("default/project", 42)),
+    ],
+)
+def test_parse_github_reference(
+    reference: str,
+    expected: tuple[str, int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GitHub references support explicit and current-repository forms."""
+    monkeypatch.setenv("GITHUB_REPOSITORY", "default/project")
+    assert lib._parse_github_reference(reference, Path("test.py")) == expected
+
+
+def test_parse_github_reference_from_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Short GitHub references fall back to the origin remote outside Actions."""
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+    monkeypatch.setattr(
+        lib,
+        "_repository_from_git",
+        lambda directory: "octocat/example",
+    )
+    assert lib._parse_github_reference("#42", Path("test.py")) == (
+        "octocat/example",
+        42,
+    )
+
+
+@pytest.mark.parametrize(
+    "reference",
+    ["", "#0", "octocat/example", "https://github.com/octocat/example/issues/42"],
+)
+def test_invalid_github_reference(reference: str) -> None:
+    """Invalid GitHub references fail with a useful error."""
+    with pytest.raises(ValueError, match="Invalid GitHub reference"):
+        lib._parse_github_reference(reference, Path("test.py"))
+
+
+@pytest.mark.parametrize(
+    ("kind", "resource", "payload", "expected"),
+    [
+        (
+            "ghi",
+            "issues",
+            {"state": "open", "state_reason": None},
+            (False, False, None),
+        ),
+        (
+            "ghi",
+            "issues",
+            {"state": "closed", "state_reason": "completed"},
+            (True, True, "completed"),
+        ),
+        (
+            "ghi",
+            "issues",
+            {"state": "closed", "state_reason": "not_planned"},
+            (True, False, "not_planned"),
+        ),
+        (
+            "ghi",
+            "issues",
+            {"state": "closed", "state_reason": "duplicate"},
+            (True, False, "duplicate"),
+        ),
+        (
+            "ghi",
+            "issues",
+            {"state": "closed", "state_reason": None},
+            (True, False, None),
+        ),
+        (
+            "ghp",
+            "pulls",
+            {"state": "open", "merged": False, "merged_at": None},
+            (False, False, None),
+        ),
+        (
+            "ghp",
+            "pulls",
+            {"state": "closed", "merged": True, "merged_at": "2026-01-01"},
+            (True, True, None),
+        ),
+        (
+            "ghp",
+            "pulls",
+            {"state": "closed", "merged": False, "merged_at": "2026-01-01"},
+            (True, True, None),
+        ),
+        (
+            "ghp",
+            "pulls",
+            {"state": "closed", "merged": False, "merged_at": None},
+            (True, False, None),
+        ),
+    ],
+)
+def test_fetch_github_item(
+    kind: lib._GitHubKind,
+    resource: str,
+    payload: dict[str, object],
+    expected: tuple[bool, bool, str | None],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GitHub API responses map to open, completed, and rejected states."""
+    requests: list[Request] = []
+
+    def _urlopen(request: Request, timeout: int) -> _Response:
+        requests.append(request)
+        assert request.full_url == f"https://github.example/api/v3/repos/octocat/example/{resource}/42"
+        assert timeout == 3
+        headers = {name.casefold(): value for name, value in request.header_items()}
+        assert headers["accept"] == "application/vnd.github+json"
+        assert headers["authorization"] == "Bearer test-token"
+        assert headers["user-agent"] == "yore"
+        assert headers["x-github-api-version"] == "2022-11-28"
+        return _Response(payload)
+
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_TOKEN", "ignored-token")
+    monkeypatch.setattr(lib, "urlopen", _urlopen)
+    lib._fetch_github_item.cache_clear()
+
+    item = lib._fetch_github_item(
+        kind,
+        "octocat/example",
+        42,
+        "https://github.example/api/v3",
+    )
+    assert (item.closed, item.completed, item.reason) == expected
+    assert (
+        lib._fetch_github_item(
+            kind,
+            "octocat/example",
+            42,
+            "https://github.example/api/v3",
+        )
+        is item
+    )
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize(
+    ("github_token", "expected_authorization"),
+    [("actions-token", "Bearer actions-token"), (None, None)],
+)
+def test_fetch_github_item_authentication_fallback(
+    github_token: str | None,
+    expected_authorization: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GITHUB_TOKEN is the fallback, while public requests can be anonymous."""
+    monkeypatch.delenv("GH_TOKEN", raising=False)
+    if github_token is None:
+        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("GITHUB_TOKEN", github_token)
+
+    def _urlopen(request: Request, timeout: int) -> _Response:
+        headers = {name.casefold(): value for name, value in request.header_items()}
+        assert timeout == 3
+        assert headers.get("authorization") == expected_authorization
+        return _Response({"state": "open", "state_reason": None})
+
+    monkeypatch.setattr(lib, "urlopen", _urlopen)
+    lib._fetch_github_item.cache_clear()
+    lib._fetch_github_item("ghi", "octocat/example", 42, "https://api.github.com")
+
+
+def test_github_issue_rejects_pull_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    """GHI does not silently treat a pull request as an issue."""
+    monkeypatch.setattr(
+        lib,
+        "urlopen",
+        lambda request, timeout: _Response(
+            {"state": "closed", "state_reason": "completed", "pull_request": {}},
+        ),
+    )
+    lib._fetch_github_item.cache_clear()
+    with pytest.raises(ValueError, match="is a pull request, not an issue"):
+        lib._fetch_github_item("ghi", "octocat/example", 42, "https://api.github.com")
+
+
+@pytest.mark.parametrize(
+    ("kind", "closed", "completed", "reason", "expected", "level", "message"),
+    [
+        ("GHI", False, False, None, True, None, None),
+        (
+            "GHI",
+            True,
+            True,
+            "completed",
+            False,
+            "ERROR",
+            "GitHub issue octocat/example#42 was completed",
+        ),
+        (
+            "GHI",
+            True,
+            False,
+            "not_planned",
+            False,
+            "WARNING",
+            "was closed as not planned, not completed",
+        ),
+        ("GHI", True, False, None, False, "WARNING", "was closed, not completed"),
+        ("GHP", False, False, None, True, None, None),
+        (
+            "GHP",
+            True,
+            True,
+            None,
+            False,
+            "ERROR",
+            "GitHub pull request octocat/example#42 was merged",
+        ),
+        ("GHP", True, False, None, False, "WARNING", "was closed without being merged"),
+    ],
+)
+def test_check_github_comment(
+    *,
+    kind: str,
+    closed: bool,
+    completed: bool,
+    reason: str | None,
+    expected: bool,
+    level: str | None,
+    message: str | None,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Checking GitHub comments distinguishes open, completed, and rejected work."""
+    item = lib._GitHubItem("octocat/example", 42, closed, completed, reason)
+    monkeypatch.setattr(lib, "_fetch_github_item", lambda *args: item)
+    parsed = next(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=[f"# YORE: {kind} octocat/example#42: Remove line."],
+        ),
+    )
+
+    with caplog.at_level(0):
+        assert parsed.check() is expected
+    if level is None:
+        assert not caplog.records
+    else:
+        assert message is not None
+        assert caplog.records[-1].levelname == level
+        assert message in caplog.messages[-1]
+
+
+@pytest.mark.parametrize(
+    ("kind", "closed", "completed", "expected"),
+    [
+        ("GHI", True, True, True),
+        ("GHI", True, False, False),
+        ("GHP", True, True, True),
+        ("GHP", True, False, False),
+    ],
+)
+def test_fix_github_comment(
+    kind: str,
+    closed: bool,
+    completed: bool,
+    expected: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only completed issues and merged pull requests activate transformations."""
+    item = lib._GitHubItem("octocat/example", 42, closed, completed)
+    monkeypatch.setattr(lib, "_fetch_github_item", lambda *args: item)
+    lines = [f"# YORE: {kind} octocat/example#42: Remove line.\n", "legacy()\n"]
+    parsed = next(lib.yield_buffer_comments(file=Path("test.py"), lines=lines))
+
+    assert parsed.fix(lines) is expected
+    assert lines == ([] if expected else [f"# YORE: {kind} octocat/example#42: Remove line.\n", "legacy()\n"])
+
+
 def test_python_dates(monkeypatch: pytest.MonkeyPatch) -> None:
     """The Python adapter loads its dedicated release-cycle feed."""
 
@@ -302,6 +622,11 @@ def test_supported_comment_syntax(comment_syntax: str) -> None:
         ("bol", ("bol",)),
         ("bump", ("bump",)),
         ("eol", ("eol",)),
+        ("ghi", ("ghi", "gh issue", "github issue")),
+        (
+            "ghp",
+            ("ghp", "gh pr", "github pr", "gh pull request", "github pull request"),
+        ),
     ],
 )
 def test_kind_aliases(kind: lib.YoreKind, spellings: tuple[str, ...]) -> None:
@@ -318,6 +643,25 @@ def test_kind_aliases(kind: lib.YoreKind, spellings: tuple[str, ...]) -> None:
         assert parsed.kind.casefold() == kind
         if spelling != kind:
             assert parsed.kind == kind
+
+
+def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -> None:
+    """Readable aliases normalize while legacy compact tags retain their spelling."""
+    readable = next(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=["# YORE: GitHub Issue octocat/example#42: Remove line."],
+        ),
+    )
+    compact = next(
+        lib.yield_buffer_comments(
+            file=Path("test.py"),
+            lines=["# YORE: GHI octocat/example#42: Remove line."],
+        ),
+    )
+
+    assert readable.kind == "ghi"
+    assert compact.kind == "GHI"
 
 
 @pytest.mark.parametrize(
@@ -340,6 +684,8 @@ def test_kind_aliases(kind: lib.YoreKind, spellings: tuple[str, ...]) -> None:
         "EOL 3.8: Remove line.",
         "BOL Python 3.8: Remove line.",
         "EOL Rust 1.72: Remove line.",
+        "GHI octocat/example#42: Remove line.",
+        "GHP #42: Remove line.",
     ],
 )
 def test_supported_comments(comment: str) -> None:

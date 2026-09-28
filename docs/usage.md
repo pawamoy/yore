@@ -5,7 +5,7 @@ hide:
 
 # Usage
 
-Yore lets you write `# YORE` comments in your code base to mark lines or blocks of code as legacy code: only there to support older ecosystem versions, or backward compatibility with previous versions of your own project.
+Yore lets you write `# YORE` comments in your code base to mark lines or blocks of code as legacy code: only there to support older ecosystem versions, pending external work, or backward compatibility with previous versions of your own project.
 
 ## Syntax
 
@@ -20,6 +20,8 @@ The syntax is as follows:
 
 <WHEN> = bump <VERSION>
        | <eol|bol> [<ECOSYSTEM> ]<VERSION>
+       | ghi <GITHUB-REFERENCE>
+       | ghp <GITHUB-REFERENCE>
 
 <ECOSYSTEM> = python | rust
 ```
@@ -43,7 +45,7 @@ Trailing comments are not supported: comments must be preceded with spaces only.
 
 The default `PREFIX` is `YORE`. See [Configuration](#configuration).
 
-Trigger spellings are case-insensitive.
+Trigger spellings are case-insensitive. Work-item tags have readable aliases.
 The following table is exhaustive:
 
 | Compact tag | Meaning | Readable aliases |
@@ -51,6 +53,12 @@ The following table is exhaustive:
 | `Bump` | Project version bump | — |
 | `BOL` | Beginning of ecosystem life | — |
 | `EOL` | End of ecosystem life | — |
+| `GHI` | GitHub issue | `gh issue`, `github issue` |
+| `GHP` | GitHub pull request | `gh pr`, `github pr`, `gh pull request`, `github pull request` |
+
+For example, `GHI`, `gh issue`, and `GitHub Issue` select exactly the same
+trigger. Readable aliases are normalized to their compact kind internally and
+do not change reference parsing, completion rules, diagnostics, or fixes.
 
 ### Lifecycle triggers
 
@@ -69,6 +77,12 @@ When you omit the qualifier, Yore uses the filename or extension:
 | Rust | `.rs`, `Cargo.toml`, and `Cargo.lock` |
 
 Python lifecycle dates come from the Python release-cycle data. Rust dates come from the [endoflife.date API](https://endoflife.date/docs/api/v1/). A release without a scheduled EOL date stays inactive for EOL checks and fixes. Rust version spellings such as `1.90.0` and `v1.90` resolve to the `1.90` series.
+
+### GitHub triggers
+
+GitHub references accept `owner/repository#number`, `#number`, or `number`. The two short forms use `GITHUB_REPOSITORY` when it is set (as it normally is in GitHub Actions), then fall back to the Git `origin` remote. `GHI` becomes actionable only when the issue is closed with reason `completed`; `GHP` becomes actionable only when the pull request is merged. During `check`, an issue closed for another reason and a pull request closed without merging emit warnings and make the check fail, but `diff` and `fix` leave their code untouched.
+
+Yore reads public GitHub data without authentication. Set `GH_TOKEN` (preferred) or `GITHUB_TOKEN` to raise the rate limit and access private repositories. `GITHUB_API_URL` changes the API root for GitHub Enterprise; it defaults to `https://api.github.com`. A reference is fetched once per process. API, authentication, rate-limit, and malformed-response errors propagate instead of being treated as open work.
 
 Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
 
@@ -116,6 +130,20 @@ return [cpn.lstrip("_") for cpn in a.split(".")] == [cpn.lstrip("_") for cpn in 
 ```rust
 // YORE: EOL Rust 1.72: Remove line.
 compatibility_workaround();
+```
+
+*Remove a workaround after a GitHub issue is completed.*
+
+```python
+# YORE: GHI pawamoy/yore#123: Remove line.
+legacy_issue_workaround()
+```
+
+*Remove temporary compatibility code after a pull request is merged.*
+
+```python
+# YORE: GHP #456: Remove line.
+temporary_pr_compatibility()
 ```
 
 *Simplify union of accepted types when we bump the project to version 1.0.0.*
@@ -267,7 +295,7 @@ Example commands:
 
 ### `yore check`
 
-Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a `bump` comment, Yore will report it. The same applies when an ecosystem lifecycle date has arrived. If you want to be warned before an EOL (End of Life) date, use the `-E`, `--eol`, `--eol-within` option. If you want to be warned before a BOL (Beginning of Life) date, use the `-B`, `--bol`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
+Once you have written a few Yore comments in your code base, you can check them with the `yore check` command. If a comment is outdated, for example the current version of the project is equal to or higher than a `bump` comment, Yore will report it. The same applies when an ecosystem lifecycle date has arrived or an external work item is fulfilled. Terminal but unfulfilled work is reported as a warning instead. If you want to be warned before an EOL (End of Life) date, use the `-E`, `--eol`, `--eol-within` option. If you want to be warned before a BOL (Beginning of Life) date, use the `-B`, `--bol`, `--bol-within` option. To specify the upcoming project version, use the `-b`, `--bump` option.
 
 ```console
 % yore check --eol '8 months' --bump 2.0
@@ -328,7 +356,7 @@ Like `yore fix`, but in dry-run mode (don't actually write on disk), and print t
 
 ### `yore fix`
 
-Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace lines or blocks of code, but only when an ecosystem lifecycle date has been reached, or the provided upcoming project version is equal to or higher than the one specified in the comments. Comments whose trigger is not fulfilled are left untouched.
+Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace lines or blocks of code, but only when an ecosystem lifecycle date has been reached, an external work item is fulfilled, or the provided upcoming project version is equal to or higher than the one specified in the comments. Active and terminal-but-unfulfilled work is left untouched.
 
 ```console
 % yore fix -f5m -b1

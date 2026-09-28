@@ -97,7 +97,7 @@ class _ServiceOptions:
     description=cleandoc(
         """
         This command checks existing Yore comments in your code base against
-        supported ecosystem lifecycle dates or the
+        supported ecosystem lifecycle dates, external work-item states, or the
         provided next version of your project.
         """,
     ),
@@ -420,10 +420,19 @@ class CommandFix(_ServiceOptions):
         # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
 
         `<WHEN>` is `bump <VERSION>` or `<eol|bol> [<ECOSYSTEM> ]<VERSION>`.
+        It also accepts external work-item references:
+        `GHI` and `GHP` (GitHub).
+
+        Work-item triggers accept case-insensitive compact tags and readable provider names.
 
         Supported lifecycle ecosystems are Python and Rust. When no ecosystem
         is given, Yore infers Rust from Cargo files and `.rs` files, and
         defaults to Python for other files.
+
+        GitHub references accept `owner/repository#number`, `#number`, or
+        `number`. Short references use `GITHUB_REPOSITORY`, then the Git
+        `origin` remote. Authentication uses `GH_TOKEN` or `GITHUB_TOKEN` when
+        available.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
@@ -451,6 +460,13 @@ class CommandFix(_ServiceOptions):
         ```rust
         // YORE: EOL Rust 1.72: Remove line.
         compatibility_workaround();
+        ```
+
+        *Remove a workaround when a GitHub issue is completed.*
+
+        ```python
+        # YORE: GitHub issue pawamoy/yore#123: Remove line.
+        legacy_issue_workaround()
         ```
 
         *Replace `lstrip` by `removeprefix` when Python 3.8 reaches its End of Life.*
