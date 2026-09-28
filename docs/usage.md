@@ -124,7 +124,7 @@ For GitLab and Forgejo issues, the default completion labels are `yore:completed
 
 Each resolved provider reference is fetched at most once per process. Requests have a three-second timeout. Connectivity, authentication, rate-limit, decoding, malformed-response, and unsupported-state errors propagate instead of being interpreted as active work.
 
-Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
+Line references are one-based, and ranges are inclusive. Either endpoint can be omitted: `2-` selects line 2 through the end of the selected scope. `-5` selects the start through line 5. Line references are relative to the start of a block for `block` scope and absolute for `file` scope.
 
 ## Examples
 

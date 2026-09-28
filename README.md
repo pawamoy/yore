@@ -76,6 +76,8 @@ temporary_forgejo_workaround()
 
 See the [usage guide](https://pawamoy.github.io/yore/usage/#other-work-item-services) for reference forms, completion rules, credentials, and configuration.
 
+Line ranges are inclusive and can omit either endpoint. `2-` selects line 2 through the end of a block or file. `-5` selects its start through line 5.
+
 Check your code base:
 
 ```console

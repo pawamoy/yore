@@ -86,6 +86,8 @@ class _Match:
         ("1-3", [1, 2, 3]),
         ("1-2", [1, 2]),
         ("1-1", [1]),
+        ("-5", [1, 2, 3, 4, 5]),
+        ("2 - 5", [2, 3, 4, 5]),
         ("1-2, 3, 5-7", [1, 2, 3, 5, 6, 7]),
     ],
 )
@@ -95,12 +97,61 @@ def test_match_to_lines(lines: str, expected_lines: list[int]) -> None:
     assert lib._match_to_lines(match) == expected_lines  # ty: ignore[invalid-argument-type]
 
 
+@pytest.mark.parametrize(
+    ("lines", "expected_ranges"),
+    [
+        ("2-", [(2, None)]),
+        ("-5", [(None, 5)]),
+        ("-2, 4-6, 8-", [(None, 2), (4, 6), (8, None)]),
+    ],
+)
+def test_match_to_open_line_ranges(
+    lines: str,
+    expected_ranges: list[tuple[int | None, int | None]],
+) -> None:
+    """Assert that line ranges can omit either endpoint."""
+    match = _Match(lines)
+    assert lib._match_to_line_ranges(match) == expected_ranges  # ty: ignore[invalid-argument-type]
+
+
 def test_removing_file(tmp_path: Path) -> None:
     """Files are removed by "remove" comments and "file" scope."""
     file = tmp_path / "file1.py"
     file.write_text("# YORE: Bump 1: Remove file.", encoding="utf8")
     next(lib.yield_file_comments(file)).fix(bump="1")
     assert not file.exists()
+
+
+@pytest.mark.parametrize(
+    ("line_spec", "selected"),
+    [
+        ("2-", ["beta", "gamma", "delta", "epsilon", "zeta"]),
+        ("-5", ["alpha", "beta", "gamma", "delta", "epsilon"]),
+        ("2-5", ["beta", "gamma", "delta", "epsilon"]),
+        ("1, 4-", ["alpha", "delta", "epsilon", "zeta"]),
+    ],
+)
+def test_replacing_block_with_line_ranges(line_spec: str, selected: list[str]) -> None:
+    """Bounded and open ranges select one-based lines within the target block."""
+    lines = [
+        "if enabled:\n",
+        f"    # YORE: Bump 1: Replace block with lines {line_spec}.\n",
+        "    alpha\n",
+        "    beta\n",
+        "    gamma\n",
+        "    delta\n",
+        "    epsilon\n",
+        "    zeta\n",
+        "after_block()\n",
+    ]
+    parsed = next(lib.yield_buffer_comments(file=Path("test.py"), lines=lines))
+
+    assert parsed.fix(lines, bump="1")
+    assert lines == [
+        "if enabled:\n",
+        *(f"    {line}\n" for line in selected),
+        "after_block()\n",
+    ]
 
 
 def test_check_messages(
@@ -1022,6 +1073,8 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
         "Bump 1: Replace block with line 2.",
         "Bump 1: Replace file with line 2.",
         "Bump 1: Replace block with lines 2-10.",
+        "Bump 1: Replace block with lines 2-.",
+        "Bump 1: Replace block with lines -5.",
         "Bump 1: Replace file with line 2-10.",
         "BOL 3.8: Remove line.",
         "EOL 3.8: Remove line.",

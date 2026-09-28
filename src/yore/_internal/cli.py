@@ -440,7 +440,7 @@ class CommandFix(_ServiceOptions):
         ```python
         # <PREFIX>: <WHEN>: Remove <block|line>.
         # <PREFIX>: <WHEN>: replace <block|line> with line <LINENO>.
-        # <PREFIX>: <WHEN>: replace <block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
+        # <PREFIX>: <WHEN>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
         # <PREFIX>: <WHEN>: replace <block|line> with `<STRING>`.
         # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` within <block|line>.
 
@@ -468,6 +468,9 @@ class CommandFix(_ServiceOptions):
         infer the RID from the Git `rad` remote, then `rad inspect --rid`.
         Yore reads locally seeded COBs with `rad cob show`.
 
+        Line references are one-based and ranges are inclusive. Either range
+        endpoint can be omitted: `2-` means line 2 through the end of the
+        selected scope, and `-5` means its start through line 5.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.

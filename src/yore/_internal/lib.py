@@ -23,7 +23,7 @@ import logging
 import os
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
 from datetime import timedelta as TimeDelta  # noqa: N812
@@ -161,19 +161,54 @@ def _match_to_line(match: re.Match) -> int | None:
     return None
 
 
-def _match_to_lines(match: re.Match) -> list[int] | None:
+_LineRange = tuple[int | None, int | None]
+
+
+def _match_to_line_ranges(match: re.Match) -> list[_LineRange] | None:
     if matched_lines := match.group("lines"):
-        lines: list[int] = []
+        line_ranges: list[_LineRange] = []
+        matched_lines = re.sub(r" *- *", "-", matched_lines)
         matched_lines = matched_lines.replace(" ", ",").strip(",")
         matched_lines = re.sub(",+", ",", matched_lines)
         for line_range in matched_lines.split(","):
             if "-" in line_range:
-                start, end = line_range.split("-")
-                lines.extend(range(int(start), int(end) + 1))
+                endpoints = line_range.split("-")
+                if len(endpoints) != 2:  # noqa: PLR2004
+                    raise ValueError(f"Invalid line range: {line_range}")
+                start = int(endpoints[0]) if endpoints[0] else None
+                end = int(endpoints[1]) if endpoints[1] else None
+                if start is None and end is None:
+                    raise ValueError("A line range must have at least one endpoint")
+                line_ranges.append((start, end))
             else:
-                lines.append(int(line_range))
-        return lines
+                line = int(line_range)
+                line_ranges.append((line, line))
+        return line_ranges
     return None
+
+
+def _expand_line_ranges(
+    line_ranges: list[_LineRange] | None,
+    *,
+    end: int | None = None,
+) -> list[int] | None:
+    if line_ranges is None:
+        return None
+    lines: list[int] = []
+    for range_start, range_end in line_ranges:
+        effective_end = range_end
+        if effective_end is None:
+            if end is None:
+                return None
+            effective_end = end
+        lines.extend(
+            range(1 if range_start is None else range_start, effective_end + 1),
+        )
+    return lines
+
+
+def _match_to_lines(match: re.Match) -> list[int] | None:
+    return _expand_line_ranges(_match_to_line_ranges(match))
 
 
 def _infer_versioned(file: Path) -> Versioned:
@@ -202,7 +237,8 @@ def _match_to_kind(match: re.Match) -> YoreKind:
 
 
 def _match_to_comment(match: re.Match, file: Path, lineno: int, inferred: Versioned) -> YoreComment:
-    return YoreComment(
+    line_ranges = _match_to_line_ranges(match)
+    comment = YoreComment(
         file=file,
         lineno=lineno,
         raw=match.group(0),
@@ -214,13 +250,15 @@ def _match_to_comment(match: re.Match, file: Path, lineno: int, inferred: Versio
         remove=match.group("remove"),
         replace=match.group("replace"),
         line=_match_to_line(match),
-        lines=_match_to_lines(match),
+        lines=_expand_line_ranges(line_ranges),
         string=match.group("string"),
         regex=bool(match.group("regex")),
         pattern1=match.group("pattern1"),
         pattern2=match.group("pattern2"),
         within=match.group("within"),
     )
+    comment._line_ranges = line_ranges
+    return comment
 
 
 def _within(delta: TimeDelta, of: Date) -> bool:
@@ -533,6 +571,12 @@ class YoreComment:
     """The line to replace."""
     lines: list[int] | None = None
     """The lines to replace."""
+    _line_ranges: list[_LineRange] | None = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
     string: str | None = None
     """The string to replace."""
     regex: bool = False
@@ -793,8 +837,13 @@ class YoreComment:
                 start, end = _scope_range(self.replace, buffer, start)
                 if self.line:
                     replacement = [buffer[start + self.line - 1]]
+                elif self._line_ranges is not None:
+                    lines = _expand_line_ranges(self._line_ranges, end=end - start)
+                    if lines is None:
+                        raise RuntimeError("Could not resolve line ranges")
+                    replacement = [buffer[start + line - 1] for line in lines]
                 elif self.lines:
-                    replacement = [buffer[start + line] for line in self.lines]
+                    replacement = [buffer[start + line - 1] for line in self.lines]
                 elif self.string:
                     replacement = [self.string + "\n"]
                 else:
