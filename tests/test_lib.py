@@ -45,6 +45,11 @@ def test_block_size(block: list[str], expected_size: int) -> None:
     assert lib._block_size(block, 0) == expected_size
 
 
+def test_ecosystem_build_directories_are_excluded_by_default() -> None:
+    """Rust build directories are excluded from recursive scans."""
+    assert "target" in lib.DEFAULT_EXCLUDE
+
+
 class _Match:
     def __init__(self, lines: str) -> None:
         self.lines = lines
@@ -111,6 +116,10 @@ def test_check_messages(
     [
         (Path("test.py"), [], "python"),
         (Path("test.PY"), [], "python"),
+        (Path("test.rs"), [], "rust"),
+        (Path("test.RS"), [], "rust"),
+        (Path("Cargo.toml"), [], "rust"),
+        (Path("Cargo.lock"), [], "rust"),
         (Path("test.js"), [], "python"),
         (Path("test.go"), [], "python"),
         (Path("manage.py"), ["from django.db import models"], "python"),
@@ -138,6 +147,7 @@ def test_infer_versioned_project(
     ("qualifier", "expected"),
     [
         ("Python", "python"),
+        ("Rust", "rust"),
     ],
 )
 def test_explicit_versioned_project(qualifier: str, expected: lib.Versioned) -> None:
@@ -149,6 +159,17 @@ def test_explicit_versioned_project(qualifier: str, expected: lib.Versioned) -> 
         ),
     )
     assert parsed.versioned == expected
+
+
+def test_explicit_versioned_project_overrides_inference() -> None:
+    """An explicit qualifier takes precedence over the inferred ecosystem."""
+    parsed = next(
+        lib.yield_buffer_comments(
+            file=Path("test.rs"),
+            lines=["// YORE: EOL Python 3.8: Remove line."],
+        ),
+    )
+    assert parsed.versioned == "python"
 
 
 def test_python_dates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -171,11 +192,99 @@ def test_python_dates(monkeypatch: pytest.MonkeyPatch) -> None:
     assert dates["3.13"] == (date(2024, 10, 7), date(2029, 11, 1))
 
 
+def test_endoflife_dates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The generic adapter loads concrete and unscheduled lifecycle dates."""
+
+    class _Response:
+        @staticmethod
+        def read() -> bytes:
+            return (
+                b'{"result":{"releases":['
+                b'{"name":"1.26","releaseDate":"2026-02-10","eolFrom":"2027-02-01"},'
+                b'{"name":"1.27","releaseDate":"2026-08-19","eolFrom":null}'
+                b"]}}"
+            )
+
+    dates = lib._LazyEndOfLifeDates("rust")
+
+    def _urlopen(url: str, timeout: int) -> _Response:
+        assert url == "https://endoflife.date/api/v1/products/rust/"
+        assert timeout == 3
+        return _Response()
+
+    monkeypatch.setattr(lib, "urlopen", _urlopen)
+
+    assert dates["1.26"] == (date(2026, 2, 10), date(2027, 2, 1))
+    assert dates["1.27.0"] == (date(2026, 8, 19), None)
+
+
+@pytest.mark.parametrize(
+    ("product", "stored", "requested"),
+    [
+        ("rust", "1.90", "1.90.0"),
+        ("rust", "1.90", "v1.90"),
+    ],
+)
+def test_endoflife_date_version_normalization(
+    product: str,
+    stored: str,
+    requested: str,
+) -> None:
+    """Common ecosystem-specific version spellings resolve to release series."""
+    dates = lib._LazyEndOfLifeDates(product)
+    dates._dates[stored] = (date(2020, 1, 1), date(2021, 1, 1))
+    assert dates[requested] == dates._dates[stored]
+
+
 def test_lifecycle_date_provider_registry() -> None:
     """Every supported ecosystem has its own registered date-provider cache."""
     assert lib.lifecycle_dates == {
         "python": lib.python_dates,
+        "rust": lib.rust_dates,
     }
+    assert lib.rust_dates.data_url == "https://endoflife.date/api/v1/products/rust/"
+
+
+@pytest.mark.parametrize(
+    ("file", "comment", "expected"),
+    [
+        (Path("test.rs"), "EOL 1: Remove line.", "rust"),
+    ],
+)
+def test_fix_versioned_comment(
+    file: Path,
+    comment: str,
+    expected: lib.Versioned,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Inferred lifecycle comments use the matching provider when fixing."""
+    eol = None if comment.startswith("BOL") else date(2021, 1, 1)
+    monkeypatch.setattr(
+        lib.lifecycle_dates[expected],
+        "_dates",
+        {"1": (date(2020, 1, 1), eol)},
+    )
+    lines = [f"// YORE: {comment}\n", "old_api();\n"]
+    parsed = next(lib.yield_buffer_comments(file=file, lines=lines))
+
+    assert parsed.versioned == expected
+    assert parsed.fix(lines)
+    assert not lines
+
+
+def test_unscheduled_or_unknown_eol_is_inactive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Checks and fixes skip unscheduled and unknown ecosystem EOL dates."""
+    monkeypatch.setattr(lib.rust_dates, "_dates", {"1.27": (date(2026, 8, 19), None)})
+
+    for version in ("1.27", "unknown"):
+        lines = [f"// YORE: EOL Rust {version}: Remove line.\n", "supported();\n"]
+        parsed = next(lib.yield_buffer_comments(file=Path("test.rs"), lines=lines))
+
+        assert parsed.check()
+        assert not parsed.fix(lines)
+        assert len(lines) == 2
 
 
 @pytest.mark.parametrize(
@@ -230,6 +339,7 @@ def test_kind_aliases(kind: lib.YoreKind, spellings: tuple[str, ...]) -> None:
         "BOL 3.8: Remove line.",
         "EOL 3.8: Remove line.",
         "BOL Python 3.8: Remove line.",
+        "EOL Rust 1.72: Remove line.",
     ],
 )
 def test_supported_comments(comment: str) -> None:

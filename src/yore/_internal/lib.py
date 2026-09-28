@@ -64,20 +64,25 @@ _KIND_ALIASES: dict[str, YoreKind] = {
 }
 
 
-Versioned = Literal["python"]
+Versioned = Literal["python", "rust"]
 """The versioned projects supported by lifecycle comments."""
 
 _VERSIONED_ALIASES: dict[str, Versioned] = {
     "python": "python",
+    "rust": "rust",
 }
 
-_FILENAME_VERSIONED: dict[str, Versioned] = {}
+_FILENAME_VERSIONED: dict[str, Versioned] = {
+    "cargo.lock": "rust",
+    "cargo.toml": "rust",
+}
 
 _EXTENSION_VERSIONED: dict[str, Versioned] = {
     ".py": "python",
     ".pyi": "python",
     ".pyw": "python",
     ".pyx": "python",
+    ".rs": "rust",
 }
 
 Scope = Literal["block", "file", "line"]
@@ -86,7 +91,7 @@ Scope = Literal["block", "file", "line"]
 DEFAULT_PREFIX = "YORE"
 """The default prefix for Yore comments."""
 
-DEFAULT_EXCLUDE = [".*", "__py*", "build", "dist"]
+DEFAULT_EXCLUDE = [".*", "__py*", "build", "dist", "target"]
 """The default patterns to exclude when scanning directories."""
 
 _logger = logging.getLogger(__name__)
@@ -670,7 +675,61 @@ python_dates = _LazyPythonDates()
 """A dictionary of Python versions and their Beginning/End of Life dates."""
 
 
+class _LazyEndOfLifeDates(_LazyDates):
+    EOL_DATA_URL = "https://endoflife.date/api/v1/products/{product}/"
+
+    def __init__(self, product: str) -> None:
+        super().__init__()
+        self.product = product
+
+    @property
+    def data_url(self) -> str:
+        return self.EOL_DATA_URL.format(product=self.product)
+
+    def __getitem__(self, version: str) -> _ReleaseDates:
+        if not self._dates and not self._fetched:
+            self._fetch()
+            self._fetched = True
+        for candidate in self._version_candidates(version):
+            if candidate in self._dates:
+                return self._dates[candidate]
+        raise KeyError(version)
+
+    def _version_candidates(self, version: str) -> list[str]:
+        candidates: list[str] = []
+
+        def _add(candidate: str) -> None:
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+        normalized = version.strip()
+        _add(normalized)
+        if normalized.casefold().startswith("v"):
+            normalized = normalized[1:]
+            _add(normalized)
+        if normalized.casefold().endswith(".x"):
+            normalized = normalized[:-2]
+            _add(normalized)
+        while normalized.endswith(".0"):
+            normalized = normalized[:-2]
+            _add(normalized)
+        return candidates
+
+    def _fetch(self) -> None:
+        data = json.loads(urlopen(self.data_url, timeout=3).read())  # noqa: S310
+        dates: dict[str, _ReleaseDates] = {}
+        for info in data["result"]["releases"]:
+            bol_date = _LazyPythonDates._to_date(info["releaseDate"])
+            eol_date = _LazyPythonDates._to_date(info["eolFrom"]) if info["eolFrom"] is not None else None
+            dates[info["name"]] = (bol_date, eol_date)
+        self._dates.update(dates)
+
+
+rust_dates = _LazyEndOfLifeDates("rust")
+"""A dictionary of Rust versions and their Beginning/End of Life dates."""
+
 lifecycle_dates: dict[Versioned, _LazyDates] = {
     "python": python_dates,
+    "rust": rust_dates,
 }
 """The date providers for each supported versioned project."""

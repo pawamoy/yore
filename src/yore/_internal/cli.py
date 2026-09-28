@@ -421,7 +421,9 @@ class CommandFix(_ServiceOptions):
 
         `<WHEN>` is `bump <VERSION>` or `<eol|bol> [<ECOSYSTEM> ]<VERSION>`.
 
-        Python is the supported lifecycle ecosystem and the default qualifier.
+        Supported lifecycle ecosystems are Python and Rust. When no ecosystem
+        is given, Yore infers Rust from Cargo files and `.rs` files, and
+        defaults to Python for other files.
         ```
 
         Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional.
@@ -442,6 +444,13 @@ class CommandFix(_ServiceOptions):
             from astunparse import unparse
         else:
             from ast import unparse
+        ```
+
+        *Remove a compatibility line when Rust 1.72 reaches its End of Life.*
+
+        ```rust
+        // YORE: EOL Rust 1.72: Remove line.
+        compatibility_workaround();
         ```
 
         *Replace `lstrip` by `removeprefix` when Python 3.8 reaches its End of Life.*

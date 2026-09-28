@@ -19,9 +19,9 @@ For these use-cases, Yore comes to the rescue.
 
 Yore was born from the will of automating comments I had added along the evolution of my projects. I was usually writing comments such as `TODO: Remove once support for Python 3.8 is dropped`, or `TODO: Remove when we are ready for v1`. One day I decided to make these comments more formal, so I designed a very simple syntax and wrote a tool that would parse them and act on them.
 
-Yore can therefore find comments in your code base, to warn you about upcoming end-of-life dates of Python versions, or outdated code based on the project version. It can also apply transformations to your code, to remove legacy blocks or lines of code or update them.
+Yore can therefore find comments in your code base, to warn you about lifecycle dates of supported ecosystem versions, or outdated code based on the project version. It can also apply transformations to your code, to remove legacy blocks or lines of code or update them.
 
-**Yore is language agnostic.** It works with many of the most popular languages. For now it only supports beginning/end of life dates for Python, but in the future it will likely support more.
+**Yore is language agnostic.** It can scan comments in many languages. Its lifecycle triggers support Python and Rust.
 
 ## Quick usage
 
@@ -33,6 +33,13 @@ if sys.version_info < (3, 9):
     from astunparse import unparse
 else:
     from ast import unparse
+```
+
+Yore infers Rust from Cargo files and `.rs` files. It uses Python for other files. You can name the ecosystem explicitly to override inference:
+
+```rust
+// YORE: EOL Rust 1.72: Remove line.
+compatibility_workaround();
 ```
 
 Check your code base:

@@ -21,7 +21,7 @@ The syntax is as follows:
 <WHEN> = bump <VERSION>
        | <eol|bol> [<ECOSYSTEM> ]<VERSION>
 
-<ECOSYSTEM> = python
+<ECOSYSTEM> = python | rust
 ```
 
 Terms between `<` and `>` *must* be provided, while terms between `[` and `]` are optional. Uppercase terms are placeholders that you should replace with actual values, while lowercase terms are keywords that you should use literally. Everything except placeholders is case-insensitive.
@@ -54,19 +54,21 @@ The following table is exhaustive:
 
 ### Lifecycle triggers
 
-For `eol` and `bol`, you can name the ecosystem explicitly, for example `EOL Python 3.8`. An explicit qualifier overrides inference. Qualifiers are case-insensitive:
+For `eol` and `bol`, you can name the ecosystem explicitly, for example `EOL Rust 1.72`. An explicit qualifier overrides inference. Qualifiers are case-insensitive:
 
 | Ecosystem | Accepted qualifiers |
 | --- | --- |
 | Python | `python` |
+| Rust | `rust` |
 
 When you omit the qualifier, Yore uses the filename or extension:
 
 | Ecosystem | Inferred from |
 | --- | --- |
 | Python | `.py`, `.pyi`, `.pyw`, and `.pyx`; also the fallback for anything unrecognized |
+| Rust | `.rs`, `Cargo.toml`, and `Cargo.lock` |
 
-Python lifecycle dates come from the Python release-cycle data.
+Python lifecycle dates come from the Python release-cycle data. Rust dates come from the [endoflife.date API](https://endoflife.date/docs/api/v1/). A release without a scheduled EOL date stays inactive for EOL checks and fixes. Rust version spellings such as `1.90.0` and `v1.90` resolve to the `1.90` series.
 
 Line number and line ranges are relative to the start of blocks for the "block" scope, but absolute for the "file" scope.
 
@@ -107,6 +109,13 @@ else:
 ```python
 # YORE: EOL 3.8: Replace `lstrip` with `removeprefix` within line.
 return [cpn.lstrip("_") for cpn in a.split(".")] == [cpn.lstrip("_") for cpn in b.split(".")]
+```
+
+*Remove a compatibility workaround when Rust 1.72 reaches its End of Life.*
+
+```rust
+// YORE: EOL Rust 1.72: Remove line.
+compatibility_workaround();
 ```
 
 *Simplify union of accepted types when we bump the project to version 1.0.0.*
