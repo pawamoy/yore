@@ -1,3 +1,21 @@
+# SPDX-License-Identifier: ISC
+#
+# ISC License
+#
+# Copyright (c) 2026, Timothée Mazzucotelli and contributors
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 # Why does this file exist, and why not put this in `__main__`?
 #
 # You might be tempted to import things from `__main__` later,
@@ -42,7 +60,7 @@ _logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class _FromConfig(cappa.ValueFrom):
     def __init__(self, field: Unset | property, /) -> None:
-        attr_name = field.fget.__name__ if isinstance(field, property) else field.name  # type: ignore[union-attr]
+        attr_name = field.fget.__name__ if isinstance(field, property) else field.name  # ty:ignore[unresolved-attribute]
         super().__init__(self._from_config, attr_name=attr_name)
 
     @staticmethod
@@ -54,12 +72,12 @@ class _FromConfig(cappa.ValueFrom):
 
 def _parse_timedelta(value: str) -> timedelta:
     """Parse a timedelta from a string."""
-    number, unit = re.match(r" *(\d+) *([a-z])[a-z]* *", value).groups()  # type: ignore[union-attr]
+    number, unit = re.match(r" *(\d+) *([a-z])[a-z]* *", value).groups()  # ty:ignore[unresolved-attribute]
     multiplier = {"d": 1, "w": 7, "m": 31, "y": 365}[unit]
     return timedelta(days=int(number) * multiplier)
 
 
-@cappa.command(
+@cappa.command(  # ty:ignore[call-non-callable]
     name="check",
     help="Check Yore comments.",
     description=cleandoc(
@@ -133,7 +151,7 @@ class CommandCheck:
         return 0 if ok else 1
 
 
-@cappa.command(
+@cappa.command(  # ty:ignore[call-non-callable]
     name="diff",
     help="See the diff you would get after fixing comments.",
     description=cleandoc(
@@ -247,8 +265,8 @@ class CommandDiff:
         if self.highlight:
             process = subprocess.Popen(self.highlight, shell=True, text=True, stdin=subprocess.PIPE)  # noqa: S602
             for line in lines:
-                process.stdin.write(line)  # type: ignore[union-attr]
-            process.stdin.close()  # type: ignore[union-attr]
+                process.stdin.write(line)  # ty:ignore[unresolved-attribute]
+            process.stdin.close()  # ty:ignore[unresolved-attribute]
             process.wait()
             return int(process.returncode)
         for line in lines:
@@ -256,7 +274,7 @@ class CommandDiff:
         return 0
 
 
-@cappa.command(
+@cappa.command(  # ty:ignore[call-non-callable]
     name="fix",
     help="Fix Yore comments and the associated code lines.",
     description=cleandoc(
@@ -355,7 +373,7 @@ class CommandFix:
         return 0
 
 
-@cappa.command(
+@cappa.command(  # ty:ignore[call-non-callable]
     name=_NAME,
     help="Manage legacy code in your code base with YORE comments.",
     description=cleandoc(
@@ -495,7 +513,7 @@ def main(
     help_formatter = cappa.HelpFormatter(default_format="Default: {default}.")
 
     try:
-        return cappa.invoke(
+        return cappa.invoke(  # ty:ignore[call-non-callable]
             CommandMain,
             argv=args,
             output=output,
