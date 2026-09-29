@@ -63,9 +63,9 @@ YoreKind = Literal[
 """The supported kinds of Yore comments."""
 
 _KIND_SPELLINGS: dict[YoreKind, tuple[str, ...]] = {
-    "bol": ("bol",),
-    "bump": ("bump",),
-    "eol": ("eol",),
+    "bol": ("bol", "beginning of life"),
+    "bump": ("bump", "version bump"),
+    "eol": ("eol", "end of life"),
     "fji": ("fji", "fj issue", "forgejo issue"),
     "fjp": ("fjp", "fj pr", "forgejo pr", "fj pull request", "forgejo pull request"),
     "ghi": ("ghi", "gh issue", "github issue"),
@@ -244,7 +244,12 @@ def _match_to_within(match: re.Match) -> Scope | None:
     return None
 
 
-def _match_to_comment(match: re.Match, file: Path, lineno: int, inferred: Versioned) -> YoreComment:
+def _match_to_comment(
+    match: re.Match,
+    file: Path,
+    lineno: int,
+    inferred: Versioned,
+) -> YoreComment:
     line_ranges = _match_to_line_ranges(match)
     comment = YoreComment(
         file=file,
@@ -598,7 +603,7 @@ class YoreComment:
 
     @property
     def is_bol(self) -> bool:
-        """Whether the comment is an End of Life comment."""
+        """Whether the comment is a Beginning of Life comment."""
         return self.kind.lower() == "bol"
 
     @property
@@ -801,7 +806,9 @@ class YoreComment:
             Whether the comment was fixed.
         """
         write = buffer is None
-        buffer = buffer or self.file.read_text(encoding="utf8").splitlines(keepends=True)
+        buffer = buffer or self.file.read_text(encoding="utf8").splitlines(
+            keepends=True,
+        )
 
         # Check if the fix should be applied.
         due = False
@@ -956,7 +963,10 @@ def get_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
 
 @cache
 def _get_prematching_pattern(prefix: str = DEFAULT_PREFIX) -> Pattern:
-    return re.compile(_PATTERN_PREFIX.replace("PREFIX", prefix), re.VERBOSE | re.IGNORECASE)
+    return re.compile(
+        _PATTERN_PREFIX.replace("PREFIX", prefix),
+        re.VERBOSE | re.IGNORECASE,
+    )
 
 
 def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[Path]:
@@ -982,7 +992,12 @@ def yield_files(directory: Path, exclude: list[str] | None = None) -> Iterator[P
             yield directory / filepath
 
 
-def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+def yield_buffer_comments(
+    file: Path,
+    lines: list[str],
+    *,
+    prefix: str = DEFAULT_PREFIX,
+) -> Iterator[YoreComment]:
     """Yield all Yore comments in a buffer.
 
     Parameters:
@@ -1004,7 +1019,11 @@ def yield_buffer_comments(file: Path, lines: list[str], *, prefix: str = DEFAULT
                 _logger.error(f"{file}:{lineno}: invalid Yore comment")
 
 
-def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+def yield_file_comments(
+    file: Path,
+    *,
+    prefix: str = DEFAULT_PREFIX,
+) -> Iterator[YoreComment]:
     """Yield all Yore comments in a file.
 
     Parameters:
@@ -1021,7 +1040,11 @@ def yield_file_comments(file: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator
     yield from yield_buffer_comments(file, lines, prefix=prefix)
 
 
-def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+def yield_directory_comments(
+    directory: Path,
+    *,
+    prefix: str = DEFAULT_PREFIX,
+) -> Iterator[YoreComment]:
     """Yield all Yore comments in a directory.
 
     Parameters:
@@ -1035,7 +1058,11 @@ def yield_directory_comments(directory: Path, *, prefix: str = DEFAULT_PREFIX) -
         yield from yield_file_comments(file, prefix=prefix)
 
 
-def yield_path_comments(path: Path, *, prefix: str = DEFAULT_PREFIX) -> Iterator[YoreComment]:
+def yield_path_comments(
+    path: Path,
+    *,
+    prefix: str = DEFAULT_PREFIX,
+) -> Iterator[YoreComment]:
     """Yield all Yore comments in a file or directory.
 
     Parameters:

@@ -92,6 +92,7 @@ ci = [
 ]
  docs = [
     "ghp-import>=2.1",
+    "griffe>=2.3",
     "griffe-typingdoc>=0.2",
     "markdown-callouts>=0.4",
     "markdown-exec>=1.8",

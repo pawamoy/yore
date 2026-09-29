@@ -53,14 +53,14 @@ Trailing comments are not supported: comments must be preceded with spaces only.
 
 The default `PREFIX` is `YORE`. See [Configuration](#configuration).
 
-Trigger spellings are case-insensitive. Work-item tags have readable aliases.
+Trigger spellings are case-insensitive. Every compact tag has readable aliases.
 The following table is exhaustive:
 
 | Compact tag | Meaning | Readable aliases |
 | --- | --- | --- |
-| `Bump` | Project version bump | — |
-| `BOL` | Beginning of ecosystem life | — |
-| `EOL` | End of ecosystem life | — |
+| `Bump` | Project version bump | `version bump` |
+| `BOL` | Beginning of ecosystem life | `beginning of life` |
+| `EOL` | End of ecosystem life | `end of life` |
 | `GHI` | GitHub issue | `gh issue`, `github issue` |
 | `GHP` | GitHub pull request | `gh pr`, `github pr`, `gh pull request`, `github pull request` |
 | `RDI` | Radicle issue | `rd issue`, `rad issue`, `radicle issue` |
@@ -449,7 +449,7 @@ Like `yore fix`, but in dry-run mode (don't actually write on disk), and print t
 Once you are ready, you can apply transformations to your code base with the `yore fix` command. It will apply what the comments instruct and remove or replace lines or blocks of code, but only when an ecosystem lifecycle date has been reached, an external work item is fulfilled, or the provided upcoming project version is equal to or higher than the one specified in the comments. Active and terminal-but-unfulfilled work is left untouched.
 
 ```console
-% yore fix -f5m -b1
+% yore fix -E5m -b1
 fixed 1 comment in ./src/griffe/encoders.py
 fixed 4 comments in ./src/griffe/dataclasses.py
 fixed 5 comments in ./src/griffe/mixins.py

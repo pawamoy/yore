@@ -995,15 +995,20 @@ def test_unscheduled_or_unknown_eol_is_inactive(
 )
 def test_supported_comment_syntax(comment_syntax: str) -> None:
     """Verify that supported comment syntax is correctly identified."""
-    assert list(lib.yield_buffer_comments(file=Path("test.txt"), lines=[f"{comment_syntax}YORE: Bump 1: Remove line."]))
+    assert list(
+        lib.yield_buffer_comments(
+            file=Path("test.txt"),
+            lines=[f"{comment_syntax}YORE: Bump 1: Remove line."],
+        ),
+    )
 
 
 @pytest.mark.parametrize(
     ("kind", "spellings"),
     [
-        ("bol", ("bol",)),
-        ("bump", ("bump",)),
-        ("eol", ("eol",)),
+        ("bol", ("bol", "beginning of life")),
+        ("bump", ("bump", "version bump")),
+        ("eol", ("eol", "end of life")),
         ("fji", ("fji", "fj issue", "forgejo issue")),
         (
             "fjp",
@@ -1056,6 +1061,20 @@ def test_kind_aliases_are_case_insensitive_and_preserve_compact_tag_spelling() -
 
     assert readable.kind == "ghi"
     assert compact.kind == "GHI"
+
+
+def test_readable_lifecycle_alias_accepts_an_ecosystem_qualifier() -> None:
+    """Lifecycle aliases retain the optional ecosystem part of the grammar."""
+    parsed = next(
+        lib.yield_buffer_comments(
+            file=Path("test.rs"),
+            lines=["// YORE: End of Life Rust 1.72: Remove line."],
+        ),
+    )
+
+    assert parsed.kind == "eol"
+    assert parsed.versioned == "rust"
+    assert parsed.version == "1.72"
 
 
 @pytest.mark.parametrize(
@@ -1173,4 +1192,6 @@ def test_invalid_optional_text_replacement_scope_is_not_treated_as_omitted(
 )
 def test_supported_comments(comment: str) -> None:
     """Verify that supported comments are correctly identified."""
-    assert list(lib.yield_buffer_comments(file=Path("test.txt"), lines=[f"# YORE: {comment}"]))
+    assert list(
+        lib.yield_buffer_comments(file=Path("test.txt"), lines=[f"# YORE: {comment}"]),
+    )

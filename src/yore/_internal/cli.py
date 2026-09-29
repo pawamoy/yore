@@ -438,10 +438,10 @@ class CommandFix(_ServiceOptions):
         The syntax is as follows:
 
         ```python
-        # <PREFIX>: <WHEN>: Remove <block|line>.
-        # <PREFIX>: <WHEN>: replace <block|line> with line <LINENO>.
+        # <PREFIX>: <WHEN>: Remove <file|block|line>.
+        # <PREFIX>: <WHEN>: replace <file|block|line> with line <LINENO>.
         # <PREFIX>: <WHEN>: replace <file|block|line> with lines <LINE-RANGE1[, LINE-RANGE2...]>.
-        # <PREFIX>: <WHEN>: replace <block|line> with `<STRING>`.
+        # <PREFIX>: <WHEN>: replace <file|block|line> with `<STRING>`.
         # <PREFIX>: <WHEN>: [regex-]replace `<PATTERN1>` with `<PATTERN2>` [within <file|block|line>].
 
         `<WHEN>` is `bump <VERSION>`, `<eol|bol> [<ECOSYSTEM> ]<VERSION>`, or
@@ -480,7 +480,7 @@ class CommandFix(_ServiceOptions):
         while lowercase terms are keywords that you should use literally.
         Everything except placeholders is case-insensitive.
 
-        The default **prefix** is `YORE`. For now it is only configurable through the Python API.
+        The default **prefix** is `YORE`. It is configurable through TOML, the CLI, or the Python API.
 
         Examples:
 
