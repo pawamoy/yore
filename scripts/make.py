@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-
 # SPDX-License-Identifier: ISC
 #
 # ISC License
 #
-# Copyright (c) 2026, Timothée Mazzucotelli and contributors
+# Copyright (c) 2024, Timothée Mazzucotelli and contributors
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
 
 
 PYTHON_VERSIONS = os.getenv("PYTHON_VERSIONS", "3.10 3.11 3.12 3.13 3.14 3.15").split()
-PYTHON_DEV = "3.15"
+PYTHON_DEV = "3.16"
 
 
 def shell(cmd: str, *, capture_output: bool = False, **kwargs: Any) -> str | None:
@@ -147,6 +146,11 @@ def vscode() -> None:
     shutil.copytree("config/vscode", ".vscode", dirs_exist_ok=True)
 
 
+def zed() -> None:
+    """Configure Zed to work on this project."""
+    shutil.copytree("config/zed", ".zed", dirs_exist_ok=True)
+
+
 def main() -> int:
     """Main entry point."""
     args = list(sys.argv[1:])
@@ -166,6 +170,7 @@ def main() -> int:
                       3.x                   Run a command in the virtual environment for Python 3.x.
                       clean                 Delete build artifacts and cache files.
                       vscode                Configure VSCode to work on this project.
+                      zed                   Configure Zed to work on this project.
                     """,
                 ),
                 flush=True,
@@ -216,9 +221,11 @@ def main() -> int:
             setup()
         elif cmd == "vscode":
             vscode()
+        elif cmd == "zed":
+            zed()
         elif cmd == "check":
             multirun("duty", "check-quality", "check-types", "check-docs")
-            run("default", "duty", "check-api")
+            run("default", "duty", "check-security", "check-api")
         elif cmd in {"check-quality", "check-docs", "check-types", "test"}:
             multirun("duty", cmd, *opts)
         else:

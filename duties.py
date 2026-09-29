@@ -2,7 +2,7 @@
 #
 # ISC License
 #
-# Copyright (c) 2026, Timothée Mazzucotelli and contributors
+# Copyright (c) 2024, Timothée Mazzucotelli and contributors
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -40,7 +40,7 @@ WINDOWS = os.name == "nt"
 PTY = not WINDOWS and not CI
 MULTIRUN = os.environ.get("MULTIRUN", "0") == "1"
 PY_VERSION = f"{sys.version_info.major}{sys.version_info.minor}"
-PY_DEV = "315"
+PY_DEV = "316"
 
 
 def pyprefix(title: str) -> str:
@@ -116,6 +116,21 @@ def check_api(ctx: Context, *cli_args: str) -> None:
 
 
 @duty
+def check_security(ctx: Context) -> None:
+    """Check for security vulnerabilities."""
+    ctx.run(
+        ["uv", "audit"],
+        title="Auditing dependencies",
+        pty=PTY,
+    )
+    ctx.run(
+        ["zizmor", "."],
+        title="Auditing GitHub Actions workflows",
+        pty=PTY,
+    )
+
+
+@duty
 def docs(ctx: Context, *cli_args: str, host: str = "127.0.0.1", port: int = 8000) -> None:
     """Serve the documentation (localhost:8000).
 
@@ -144,7 +159,7 @@ def docs_deploy(ctx: Context) -> None:
             "push": True,
             "force": True,
         },
-        title="Deploying site to GitHub pages",
+        title="Deploying site to GitHub Pages",
         command="ghp-import site -fpm 'chore: Update documentation'",
         pty=PTY,
     )
@@ -164,8 +179,8 @@ def format(ctx: Context) -> None:
 def build(ctx: Context) -> None:
     """Build source and wheel distributions."""
     ctx.run(
-        tools.build(),
-        title="Building source and wheel distributions",
+        ["uv", "build"],
+        title="Building distributions",
         pty=PTY,
     )
 
@@ -175,10 +190,21 @@ def publish(ctx: Context) -> None:
     """Publish source and wheel distributions to PyPI."""
     if not Path("dist").exists():
         ctx.run("false", title="No distribution files found")
-    dists = [str(dist) for dist in Path("dist").iterdir()]
+    dists = [str(dist) for dist in Path("dist").iterdir() if dist.suffix in (".gz", ".whl")]
+    password = None
+    if password_cmd := os.getenv("PUBLISH_PASS_CMD"):
+        password = ctx.run(
+            password_cmd.format(project="yore"),
+            capture="stdout",
+            pty=False,
+            silent=True,
+            allow_overrides=False,
+        ).strip()
     ctx.run(
-        tools.twine.upload(*dists, skip_existing=True),
-        title="Publishing source and wheel distributions to PyPI",
+        tools.twine.upload(*dists, skip_existing=True, password=password),
+        # Keep the password out of the displayed command, including on failure.
+        command=tools.twine.upload(*dists, skip_existing=True).cli_command,
+        title="Publishing distributions to PyPI",
         pty=PTY,
     )
 
@@ -190,8 +216,8 @@ def release(ctx: Context, version: str = "") -> None:
     Parameters:
         version: The new version number to use.
     """
-    if not (version := (version or input("> Version to release: ")).strip()):
-        ctx.run("false", title="A version must be provided")
+    if not version:
+        version = ctx.run(tools.git_changelog(latest_version=True), silent=True).strip()
     ctx.run("git add pyproject.toml CHANGELOG.md", title="Staging files", pty=PTY)
     ctx.run(["git", "commit", "-m", f"chore: Prepare release {version}"], title="Committing changes", pty=PTY)
     ctx.run(f"git tag -m '' -a {version}", title="Tagging commit", pty=PTY)
