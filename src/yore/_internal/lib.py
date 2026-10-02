@@ -24,10 +24,10 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
+from datetime import UTC
 from datetime import date as Date  # noqa: N812
 from datetime import datetime as DateTime  # noqa: N812
 from datetime import timedelta as TimeDelta  # noqa: N812
-from datetime import timezone as TimeZone  # noqa: N812
 from functools import cache
 from re import Pattern
 from typing import TYPE_CHECKING, Literal, cast
@@ -275,15 +275,15 @@ def _match_to_comment(
 
 
 def _within(delta: TimeDelta, of: Date) -> bool:
-    return DateTime.now(tz=TimeZone.utc).date() >= of - delta
+    return DateTime.now(tz=UTC).date() >= of - delta
 
 
 def _delta(until: Date) -> TimeDelta:
-    return until - DateTime.now(tz=TimeZone.utc).date()
+    return until - DateTime.now(tz=UTC).date()
 
 
 def _past(date: Date) -> bool:
-    return date <= DateTime.now(tz=TimeZone.utc).date()
+    return date <= DateTime.now(tz=UTC).date()
 
 
 _GITHUB_API_VERSION = "2022-11-28"

@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 import logging
-import sys
+import tomllib
 from dataclasses import dataclass, fields
 from dataclasses import field as dataclass_field
 from pathlib import Path
@@ -27,12 +27,6 @@ from typing import TYPE_CHECKING, Any
 from typing import Annotated as An
 
 from typing_extensions import Doc
-
-# DUE: EOL 3.10: Replace block with line 2.
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
